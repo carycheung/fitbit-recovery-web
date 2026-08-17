@@ -11,7 +11,7 @@
   :root{
     --bg:#07090d; --bg2:#0b0e14; --card:#12161f; --card2:#171c28; --line:#232a37;
     --txt:#eef2f7; --muted:#8a93a3; --dim:#5c6472;
-    --green:#16e07a; --yellow:#ffcb47; --red:#ff5c5c; --accent:#5aa9ff;
+    --green:#16e07a; --yellow:#ffcb47; --red:#ff5c5c; --accent:#5aa9ff; --strain:#3fd8e0;
     --safe: env(safe-area-inset-bottom,0px);
   }
   *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
@@ -34,11 +34,13 @@
   /* cards */
   .card{background:var(--card);border:1px solid var(--line);border-radius:18px;padding:18px;margin:0 0 14px}
   .panel h3{font-size:12px;text-transform:uppercase;letter-spacing:.08em;color:var(--muted);margin:0 0 14px;font-weight:600}
-  .trendHead{display:flex;align-items:center;justify-content:space-between}
+  .trendHead{display:flex;align-items:center;justify-content:space-between;gap:8px;flex-wrap:wrap}
   .ranges{display:flex;gap:6px}
-  .ranges button{background:var(--card2);border:1px solid var(--line);color:var(--muted);
+  .ranges button,.metricSel button{background:var(--card2);border:1px solid var(--line);color:var(--muted);
     border-radius:999px;padding:4px 11px;font-size:12px;font-weight:600;cursor:pointer;min-height:0}
   .ranges button.on{background:var(--accent);border-color:var(--accent);color:#04121f}
+  .metricSel{display:flex;gap:6px;margin-top:12px}
+  .metricSel button.on{background:var(--txt);border-color:var(--txt);color:#04121f}
 
   /* form */
   label{display:block;font-size:12px;color:var(--muted);margin:0 0 5px}
@@ -65,32 +67,68 @@
   details.help summary::before{content:"▸ ";color:var(--dim)}
   details.help[open] summary::before{content:"▾ "}
   .note{font-size:12px;color:var(--muted);margin-top:10px;line-height:1.6}
+  .read{font-size:12.5px;color:var(--muted);line-height:1.6;margin-top:12px;text-align:left}
+  .read b{color:var(--txt);font-weight:600}
+  .defs{font-size:12.5px;line-height:1.65;color:var(--muted)}
+  .defs .term{color:var(--txt);font-weight:600}
+  .defs>div{margin-top:12px}
   code{background:var(--card2);padding:1px 6px;border-radius:6px;font-size:11.5px}
   a{color:var(--accent)}
 
-  /* HERO ring */
-  .hero{padding:26px 18px 22px;text-align:center;
+  /* HERO ring (Recovery) */
+  .hero{padding:24px 18px 20px;text-align:center;
     background:radial-gradient(90% 70% at 50% 0%,#141b28 0%,var(--card) 70%)}
-  .ringWrap{position:relative;width:230px;height:230px;margin:2px auto 4px}
+  .heroCap{font-size:11px;font-weight:700;letter-spacing:.1em;color:var(--muted);text-transform:uppercase;margin-bottom:4px}
+  .ringWrap{position:relative;width:210px;height:210px;margin:2px auto 4px}
   .ringWrap svg{width:100%;height:100%;transform:rotate(-90deg)}
   .ringText{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center}
-  .score{font-size:66px;font-weight:800;line-height:.9;letter-spacing:-.03em}
-  .score small{font-size:22px;font-weight:700;opacity:.55;margin-left:2px}
+  .score{font-size:60px;font-weight:800;line-height:.9;letter-spacing:-.03em}
+  .score small{font-size:20px;font-weight:700;opacity:.55;margin-left:2px}
   .bandName{margin-top:8px;font-size:13px;font-weight:700;letter-spacing:.02em;text-transform:uppercase}
-  .heroSub{color:var(--muted);font-size:12.5px;margin-top:14px}
+  .heroSub{color:var(--muted);font-size:12.5px;margin-top:12px}
   .heroSub b{color:var(--txt);font-weight:600}
+
+  /* duo: sleep + strain */
+  .duo{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin:0 0 14px}
+  .mini{padding:16px 12px;text-align:center}
+  .miniCap{font-size:10.5px;font-weight:700;letter-spacing:.08em;color:var(--muted);text-transform:uppercase}
+  .miniRingWrap{position:relative;width:118px;height:118px;margin:12px auto 6px}
+  .miniRingWrap svg{width:100%;height:100%;transform:rotate(-90deg)}
+  .miniRingText{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center}
+  .miniScore{font-size:28px;font-weight:800;line-height:1;letter-spacing:-.02em}
+  .miniScore small{font-size:13px;font-weight:700;opacity:.6}
+  .miniBand{font-size:11.5px;font-weight:700;margin-top:5px}
+  .miniRead{font-size:11px;color:var(--muted);line-height:1.5;margin-top:8px;text-align:left}
+
+  /* body age */
+  .baTop{display:flex;align-items:flex-end;justify-content:space-between;gap:10px}
+  .baAge{font-size:52px;font-weight:800;line-height:.9;letter-spacing:-.03em}
+  .baAge small{font-size:18px;font-weight:700;color:var(--muted);margin-left:3px}
+  .baDelta{font-size:12.5px;font-weight:700;padding:5px 10px;border-radius:999px;white-space:nowrap}
+  .baGauge{position:relative;height:8px;border-radius:999px;margin:20px 0 6px;
+    background:linear-gradient(90deg,var(--green),var(--yellow),var(--red))}
+  .baMark{position:absolute;top:50%;width:16px;height:16px;border-radius:50%;background:var(--txt);
+    border:3px solid var(--card);transform:translate(-50%,-50%);box-shadow:0 0 0 1px var(--line)}
+  .baTick{position:absolute;top:-6px;width:2px;height:20px;background:var(--muted);transform:translateX(-50%);opacity:.6}
+  .baScaleRow{display:flex;justify-content:space-between;font-size:10.5px;color:var(--dim)}
+  .baDrivers{display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-top:16px}
+  .baDrv{background:var(--card2);border:1px solid var(--line);border-radius:12px;padding:10px;text-align:center}
+  .baDrv .k{font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:.04em}
+  .baDrv .v{font-size:19px;font-weight:700;margin-top:3px;line-height:1}
+  .baDrv .v small{font-size:11px;color:var(--muted);font-weight:600}
 
   /* metric tiles */
   .metrics{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin:0 0 14px}
   .tile{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:14px}
   .tile .k{font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.05em}
-  .tile .v{font-size:26px;font-weight:700;margin-top:6px;line-height:1;letter-spacing:-.02em}
-  .tile .v small{font-size:13px;font-weight:600;color:var(--muted);margin-left:2px}
+  .tile .v{font-size:24px;font-weight:700;margin-top:6px;line-height:1;letter-spacing:-.02em}
+  .tile .v small{font-size:12px;font-weight:600;color:var(--muted);margin-left:2px}
   .zchip{display:inline-block;margin-top:9px;font-size:11px;font-weight:700;padding:2px 8px;border-radius:999px}
+  .tile .d{font-size:10.5px;color:var(--dim);line-height:1.45;margin-top:9px}
 
   /* table */
   .tablewrap{overflow-x:auto;-webkit-overflow-scrolling:touch;margin:0 -4px}
-  table{width:100%;border-collapse:collapse;font-size:12.5px;min-width:420px}
+  table{width:100%;border-collapse:collapse;font-size:12.5px;min-width:460px}
   th,td{text-align:right;padding:9px 8px;border-bottom:1px solid var(--line);white-space:nowrap}
   th:first-child,td:first-child{text-align:left;position:sticky;left:0;background:var(--card)}
   th{color:var(--muted);font-weight:600;font-size:11px}
@@ -119,8 +157,10 @@
         <div><label>起始</label><input type="date" id="from"></div>
         <div><label>结束</label><input type="date" id="to"></div>
       </div>
+      <div><label>出生年份(用于估算身体年龄)</label><input type="number" id="birthYear" placeholder="如 1990" min="1930" max="2020"></div>
       <button class="btn" id="signin" disabled>用 Google 登录并拉取</button>
       <button class="btn ghost hide" id="refetch">重新拉取</button>
+      <button class="btn ghost hide" id="grantMore">授权「活动数据」(Strain / 身体年龄)</button>
       <div class="who" id="who"></div>
       <div id="status"></div>
 
@@ -141,7 +181,7 @@
           </div>
         </div>
         <button class="btn ghost" id="recompute" style="margin-top:12px" disabled>用当前数据重算</button>
-        <div class="note">各指标(HRV 用 ln rMSSD,RHR/呼吸取反)对滚动基线求 z 分,加权后 logistic 映射 0–100%。绿 ≥67 / 黄 34–66 / 红 &lt;34,需 ≥7 天历史建基线。</div>
+        <div class="note">Recovery:各指标(HRV 用 ln rMSSD,RHR/呼吸取反)对滚动基线求 z 分,加权后 logistic 映射 0–100%。绿 ≥67 / 黄 34–66 / 红 &lt;34,需 ≥7 天历史建基线。</div>
       </details>
 
       <details class="help">
@@ -150,7 +190,8 @@
           用 Fitbit 绑的 <b>carycheung321@gmail.com</b>:在 GCP「Google Auth 平台 → 客户端」建 <b>Web application</b> 客户端,
           Authorized JavaScript origin 填这个页面的部署地址(如 <code>https://carycheung.github.io</code>),
           把自己加进 Test users,发布状态留 Testing。需要的只读 scope:
-          <code>health_metrics_and_measurements.readonly</code> + <code>sleep.readonly</code>。
+          <code>health_metrics_and_measurements.readonly</code> + <code>sleep.readonly</code> +
+          <code>activity_and_fitness.readonly</code>(Strain / 步数 / VO₂max)。
           数据只在你浏览器里,不上传任何服务器。
         </div>
       </details>
@@ -159,12 +200,14 @@
 
   <!-- dashboard -->
   <section id="out" class="hide">
+    <!-- Recovery -->
     <div class="card hero">
+      <div class="heroCap">Recovery · 恢复度</div>
       <div class="ringWrap">
-        <svg viewBox="0 0 230 230">
-          <circle cx="115" cy="115" r="100" fill="none" stroke="var(--line)" stroke-width="16"/>
-          <circle id="ringArc" cx="115" cy="115" r="100" fill="none" stroke="var(--green)" stroke-width="16"
-                  stroke-linecap="round" stroke-dasharray="628.3" stroke-dashoffset="628.3"/>
+        <svg viewBox="0 0 210 210">
+          <circle cx="105" cy="105" r="92" fill="none" stroke="var(--line)" stroke-width="15"/>
+          <circle id="ringArc" cx="105" cy="105" r="92" fill="none" stroke="var(--green)" stroke-width="15"
+                  stroke-linecap="round" stroke-dasharray="578.05" stroke-dashoffset="578.05"/>
         </svg>
         <div class="ringText">
           <div class="score" id="score">--</div>
@@ -172,23 +215,70 @@
         </div>
       </div>
       <div class="heroSub" id="heroSub"></div>
+      <div class="read" id="recRead"></div>
     </div>
 
+    <!-- Sleep + Strain -->
+    <div class="duo">
+      <div class="card mini">
+        <div class="miniCap">Sleep · 睡眠表现</div>
+        <div class="miniRingWrap">
+          <svg viewBox="0 0 118 118">
+            <circle cx="59" cy="59" r="50" fill="none" stroke="var(--line)" stroke-width="10"/>
+            <circle id="sleepArc" cx="59" cy="59" r="50" fill="none" stroke="var(--green)" stroke-width="10"
+                    stroke-linecap="round" stroke-dasharray="314.16" stroke-dashoffset="314.16"/>
+          </svg>
+          <div class="miniRingText"><div class="miniScore" id="sleepScore">--</div><div class="miniBand" id="sleepBand">—</div></div>
+        </div>
+        <div class="miniRead" id="sleepRead"></div>
+      </div>
+      <div class="card mini">
+        <div class="miniCap">Strain · 当日负荷</div>
+        <div class="miniRingWrap">
+          <svg viewBox="0 0 118 118">
+            <circle cx="59" cy="59" r="50" fill="none" stroke="var(--line)" stroke-width="10"/>
+            <circle id="strainArc" cx="59" cy="59" r="50" fill="none" stroke="var(--strain)" stroke-width="10"
+                    stroke-linecap="round" stroke-dasharray="314.16" stroke-dashoffset="314.16"/>
+          </svg>
+          <div class="miniRingText"><div class="miniScore" id="strainScore">--</div><div class="miniBand" id="strainBand">—</div></div>
+        </div>
+        <div class="miniRead" id="strainRead"></div>
+      </div>
+    </div>
+
+    <!-- Body Age -->
+    <div class="card" id="bodyAgeCard">
+      <div class="panel"><h3 style="margin:0 0 14px">Body Age · 身体年龄</h3></div>
+      <div id="baBody"></div>
+    </div>
+
+    <!-- metric tiles -->
     <div class="metrics" id="metrics"></div>
 
+    <!-- interpretations -->
+    <details class="card help"><summary>每个指标怎么看(解读)</summary>
+      <div class="defs" id="defs" style="margin-top:14px"></div>
+    </details>
+
+    <!-- trend -->
     <div class="card panel">
-      <div class="trendHead"><h3 style="margin:0">近期趋势</h3>
+      <div class="trendHead"><h3 style="margin:0">趋势</h3>
         <div class="ranges" id="ranges"><button data-r="7">7天</button><button data-r="30" class="on">30天</button><button data-r="0">全部</button></div>
+      </div>
+      <div class="metricSel" id="metricSel">
+        <button data-m="recovery" class="on">Recovery</button>
+        <button data-m="sleep">Sleep</button>
+        <button data-m="strain">Strain</button>
       </div>
       <div id="chart" style="margin-top:14px"></div>
     </div>
 
     <details class="card help"><summary>逐日明细</summary>
       <div class="tablewrap" style="margin-top:12px"><table id="tbl">
-        <thead><tr><th>日期</th><th>Rec</th><th>HRV</th><th>RHR</th><th>呼吸</th><th>睡眠</th><th>zHRV</th><th>zRHR</th></tr></thead>
+        <thead><tr><th>日期</th><th>Rec</th><th>Sleep</th><th>Strain</th><th>HRV</th><th>RHR</th><th>睡眠</th><th>步数</th></tr></thead>
         <tbody></tbody>
       </table></div>
-      <div class="note">前若干天用于建立基线,不出分。</div>
+      <div class="note">前若干天用于建立基线,Recovery 不出分。</div>
     </details>
 
     <details class="card help"><summary>调试:原始 API 数据</summary><pre id="raw"></pre></details>
@@ -198,17 +288,27 @@
 <script>
 "use strict";
 const $=s=>document.querySelector(s);
-const SCOPES='https://www.googleapis.com/auth/googlehealth.health_metrics_and_measurements.readonly https://www.googleapis.com/auth/googlehealth.sleep.readonly';
+const SCOPES=[
+  'https://www.googleapis.com/auth/googlehealth.health_metrics_and_measurements.readonly',
+  'https://www.googleapis.com/auth/googlehealth.sleep.readonly',
+  'https://www.googleapis.com/auth/googlehealth.activity_and_fitness.readonly'
+].join(' ');
 const API='https://health.googleapis.com/v4/users/me/dataTypes';
-let tokenClient=null, accessToken=null, lastRaw=null, lastDaily=null, cachedLatest=null, lastScored=null, activeRange=30;
+let tokenClient=null, accessToken=null, lastRaw=null, lastDaily=null, cachedLatest=null, lastScored=null;
+let activeRange=30, chartMetric='recovery', triedGrant=false;
 
 /* ---------- init ---------- */
 (function(){
   const savedId=localStorage.getItem('ghClientId'); if(savedId)$("#clientId").value=savedId;
+  const by=localStorage.getItem('ghBirthYear'); if(by)$("#birthYear").value=by;
+  // 复用还没过期的 access token（省去每次刷新都要授权）
+  try{ const t=JSON.parse(localStorage.getItem('ghToken')||'null');
+    if(t&&t.token&&t.exp&&t.exp>Date.now()+60000) accessToken=t.token; }catch(e){}
   const today=new Date(); const from=new Date(); from.setDate(today.getDate()-60);
   $("#to").value=today.toISOString().slice(0,10);
   $("#from").value=from.toISOString().slice(0,10);
 })();
+$("#birthYear").addEventListener('change',()=>{ const v=$("#birthYear").value.trim(); if(v)localStorage.setItem('ghBirthYear',v); if(lastRaw)buildDailyAndRender(); });
 function setStatus(msg,kind){ const el=$("#status"); if(!msg){el.className='';el.textContent='';return;} el.className='status '+(kind||'info'); el.textContent=msg; }
 
 /* ---------- settings toggle ---------- */
@@ -226,6 +326,8 @@ function ensureClient(){
       callback:(resp)=>{
         if(resp.error){ setStatus('授权失败:'+resp.error+(resp.error_description?' — '+resp.error_description:''),'err'); return; }
         accessToken=resp.access_token;
+        const ttl=(parseInt(resp.expires_in)||3600)*1000;
+        try{ localStorage.setItem('ghToken',JSON.stringify({token:accessToken,exp:Date.now()+ttl})); }catch(e){}
         $("#refetch").classList.remove("hide"); $("#who").textContent='已授权 · carycheung321';
         fetchAll();
       }
@@ -236,17 +338,23 @@ function ensureClient(){
 }
 $("#signin").onclick=()=>{ const c=ensureClient(); if(c){ setStatus('等待 Google 授权弹窗…','info'); c.requestAccessToken({prompt: accessToken?'':'consent'}); } };
 $("#refetch").onclick=()=>{ if(accessToken) fetchAll(); else $("#signin").click(); };
+$("#grantMore").onclick=()=>{ const c=ensureClient(); if(c){ triedGrant=true; setStatus('弹窗里勾选「活动数据」权限…','info'); c.requestAccessToken({prompt:'consent'}); } };
 const gisTimer=setInterval(()=>{ if(window.google&&google.accounts&&google.accounts.oauth2){ $("#signin").disabled=false; clearInterval(gisTimer); maybeAutoLogin(); } },300);
-// 打开即自动登录并拉数(回访用户静默拿 token,直接落在今天那张卡)
 function maybeAutoLogin(){
   const cid=$("#clientId").value.trim();
-  if(!cid){ if(!cachedLatest) $("#settings").classList.remove("hide"); return; }  // 没配 Client ID:有缓存就先看缓存,没有才展开设置
-  if(cachedLatest && cachedLatest>=todayStr()){ setStatus('已是最新(缓存,今天已出分)','ok'); return; } // 缓存已含今天 → 不联网
+  if(!cid){ if(!cachedLatest) $("#settings").classList.remove("hide"); return; }
+  if(cachedLatest && cachedLatest>=todayStr()){ setStatus('已是最新(缓存,今天已出分)','ok'); return; }
   $("#settings").classList.add("hide");
+  // 已有未过期的 token → 直接拉取，不再弹授权
+  if(accessToken){
+    $("#refetch").classList.remove("hide"); $("#who").textContent='已授权 · carycheung321';
+    setStatus(cachedLatest?'缓存里还没有今天,正在更新…':'拉取中…','info');
+    fetchAll(); return;
+  }
   const c=ensureClient(); if(!c){ if(!cachedLatest) $("#settings").classList.remove("hide"); return; }
   $("#who").textContent = cachedLatest ? '后台更新中…' : '自动登录中…';
   setStatus(cachedLatest?'缓存里还没有今天,正在静默更新…':'自动登录中…','info');
-  c.requestAccessToken({prompt:''});   // 已授权过则无弹窗,直接回 token
+  c.requestAccessToken({prompt:''});
 }
 
 /* ---------- fetch ---------- */
@@ -258,7 +366,7 @@ async function apiList(type,filter){
     u.searchParams.set('filter',filter);
     if(pageToken)u.searchParams.set('pageToken',pageToken);
     const r=await fetch(u,{headers:{Authorization:'Bearer '+accessToken}});
-    if(!r.ok){ const t=await r.text(); throw new Error(`${type} → HTTP ${r.status}\n${t.slice(0,300)}`); }
+    if(!r.ok){ const t=await r.text(); throw new Error(`${type} → HTTP ${r.status} ${t.slice(0,160)}`); }
     const j=await r.json();
     (j.dataPoints||[]).forEach(p=>out.push(p));
     pageToken=j.nextPageToken||'';
@@ -270,170 +378,366 @@ async function fetchAll(){
   if(!from||!to){ setStatus('选一下起止日期','err'); return; }
   const toEx=new Date(to); toEx.setDate(toEx.getDate()+1); const toExS=toEx.toISOString().slice(0,10);
   const F=(res,field)=>`${res}.${field} >= "${from}" AND ${res}.${field} < "${toExS}"`;
-  const Fsleep=`sleep.interval.civil_end_time >= "${from}T00:00:00" AND sleep.interval.civil_end_time < "${toExS}T00:00:00"`;
+  const Fc=(res,field)=>`${res}.${field} >= "${from}T00:00:00" AND ${res}.${field} < "${toExS}T00:00:00"`;
   setStatus('拉取中…','info');
-  try{
-    const [hrv,rhr,rr,sleep]=await Promise.all([
-      apiList('daily-heart-rate-variability',F('daily_heart_rate_variability','date')),
-      apiList('daily-resting-heart-rate',F('daily_resting_heart_rate','date')),
-      apiList('daily-respiratory-rate',F('daily_respiratory_rate','date')),
-      apiList('sleep',Fsleep),
-    ]);
-    lastRaw={hrv,rhr,rr,sleep};
-    $("#raw").textContent=JSON.stringify(lastRaw,null,1);
-    const n=hrv.length+rhr.length+rr.length+sleep.length;
-    if(!n){ setStatus('授权成功,但这个区间没拉到任何数据。换个更近/更宽的区间,或确认手环已同步到 Google Health。','err'); return; }
-    setStatus(`拉到:HRV ${hrv.length} · RHR ${rhr.length} · 呼吸 ${rr.length} · 睡眠 ${sleep.length} 条`,'ok');
-    buildDailyAndRender();
-    saveCache(from,to);
-    $("#recompute").disabled=false;
-    $("#settings").classList.add("hide");
-  }catch(e){ setStatus('拉取出错:\n'+e.message,'err'); }
+  const defs={
+    hrv:['daily-heart-rate-variability',F('daily_heart_rate_variability','date')],
+    rhr:['daily-resting-heart-rate',F('daily_resting_heart_rate','date')],
+    rr:['daily-respiratory-rate',F('daily_respiratory_rate','date')],
+    sleep:['sleep',Fc('sleep','interval.civil_end_time')],
+    azm:['active-zone-minutes',Fc('active_zone_minutes','interval.civil_start_time')],
+    steps:['steps',Fc('steps','interval.civil_start_time')],
+    vo2:['daily-vo2-max',F('daily_vo2_max','date')],
+  };
+  const keys=Object.keys(defs);
+  const settled=await Promise.allSettled(keys.map(k=>apiList(defs[k][0],defs[k][1])));
+  lastRaw={}; const fails=[], errs=[];
+  settled.forEach((s,i)=>{ const k=keys[i];
+    if(s.status==='fulfilled') lastRaw[k]=s.value;
+    else { lastRaw[k]=[]; fails.push(k); errs.push((s.reason&&s.reason.message)||''); }
+  });
+  // token 过期 → 清缓存的 token，静默重授权一次
+  if(errs.some(e=>/HTTP 401|UNAUTHENTICATED|invalid_token|invalid authentication/i.test(e))){
+    localStorage.removeItem('ghToken'); accessToken=null;
+    setStatus('登录已过期,正在重新授权…','info');
+    const c=ensureClient(); if(c){ c.requestAccessToken({prompt:''}); }
+    return;
+  }
+  $("#raw").textContent=JSON.stringify(lastRaw,null,1);
+  const core=(lastRaw.hrv.length+lastRaw.rhr.length+lastRaw.rr.length+lastRaw.sleep.length);
+  const activityFailed=['azm','steps','vo2'].some(k=>fails.includes(k));
+
+  // 新增了 activity scope：若旧 token 无此权限，静默补授权一次
+  if(activityFailed && !triedGrant && accessToken){
+    triedGrant=true;
+    setStatus('需要授权「活动数据」以计算 Strain / 身体年龄,弹窗确认一下…','info');
+    const c=ensureClient(); if(c){ c.requestAccessToken({prompt:'consent'}); return; }
+  }
+  if(!core && activityFailed){ setStatus('授权成功,但这个区间没拉到数据(或权限不足)。换更近/更宽区间,或点⚙重新授权。','err'); return; }
+
+  const parts=[`HRV ${lastRaw.hrv.length}`,`RHR ${lastRaw.rhr.length}`,`呼吸 ${lastRaw.rr.length}`,`睡眠 ${lastRaw.sleep.length}`,
+               `AZM ${lastRaw.azm.length}`,`步数 ${lastRaw.steps.length}`,`VO₂ ${lastRaw.vo2.length}`];
+  setStatus('拉到:'+parts.join(' · ')+(fails.length?` (未取到:${fails.join('/')})`:''), fails.length?'info':'ok');
+  $("#grantMore").classList.toggle('hide',!activityFailed);
+  buildDailyAndRender();
+  saveCache(from,to);
+  $("#recompute").disabled=false;
+  $("#settings").classList.add("hide");
+}
+
+/* ---------- helpers ---------- */
+const num=v=>{ if(v==null)return null; const n=parseFloat((''+v).replace(/[^0-9.\-]/g,'')); return isFinite(n)?n:null; };
+function dstr(d){ if(!d)return null; if(typeof d==='object'&&d.year)return `${d.year}-${pad(d.month||1)}-${pad(d.day||1)}`;
+  const m=(''+d).match(/(\d{4})-(\d{2})-(\d{2})/); return m?`${m[1]}-${m[2]}-${m[3]}`:null; }
+// 每条 dataPoint 外面包一层：{ dataSource:{…}, <类型对象>:{…} }。取出非 dataSource 的那层。
+const pay=p=>{ if(p&&typeof p==='object'){ for(const k in p){ if(k!=='dataSource'&&p[k]&&typeof p[k]==='object') return p[k]; } } return p; };
+function segMin(st){ if(st==null)return null; const m=num(st.minutes); if(m!=null)return m;
+  const iv=st.interval||st; const a=iv.startTime||iv.civilStartTime, b=iv.endTime||iv.civilEndTime;
+  if(a&&b){ const d=(new Date(b)-new Date(a))/60000; return isFinite(d)?d:null; } return null; }
+function stageMin(v){ if(v==null)return null; if(typeof v==='number')return v; const m=num(v.minutes); if(m!=null)return m; return num(v.duration); }
+function sleepDetail(o){
+  const s=o.summary||{};
+  let asleep=num(s.minutesAsleep), tib=num(s.minutesInSleepPeriod), deep=null, rem=null;
+  const ss=s.stagesSummary;
+  // 官方结构：stagesSummary 是数组 [{type:'DEEP',minutes:N},…]；也兼容对象/键名形式
+  if(Array.isArray(ss)){ for(const st of ss){ const t=(st.type||st.stage||'').toString().toUpperCase(); const val=stageMin(st); if(val==null)continue;
+    if(t.includes('DEEP'))deep=val; else if(t.includes('REM'))rem=val; } }
+  else if(ss&&typeof ss==='object'){ for(const k in ss){ const kk=k.toLowerCase(); const val=stageMin(ss[k]); if(val==null)continue;
+    if(kk.includes('deep'))deep=val; else if(kk.includes('rem'))rem=val; } }
+  if((deep==null||rem==null)&&Array.isArray(o.stages)){ let dp=0,rm=0,hd=false,hr=false;
+    for(const st of o.stages){ const t=(st.type||st.stage||st.level||'').toString().toUpperCase(); const mn=segMin(st); if(mn==null)continue;
+      if(t.includes('DEEP')){dp+=mn;hd=true;} else if(t.includes('REM')){rm+=mn;hr=true;} }
+    if(deep==null&&hd)deep=Math.round(dp); if(rem==null&&hr)rem=Math.round(rm); }
+  if(asleep==null&&Array.isArray(o.stages)){ let sec=0,hit=false;
+    for(const st of o.stages){ const t=(st.type||st.stage||'').toString().toUpperCase();
+      if(t.includes('WAKE')||t.includes('AWAKE')||t.includes('OUT_OF_BED'))continue; const mn=segMin(st); if(mn!=null){sec+=mn;hit=true;} }
+    if(hit)asleep=Math.round(sec); }
+  if(tib==null){ const iv=o.interval||{}; const a=iv.startTime||iv.civilStartTime,b=iv.endTime||iv.civilEndTime;
+    if(a&&b){ const d=(new Date(b)-new Date(a))/60000; if(isFinite(d))tib=Math.round(d); } }
+  return {asleep,tib,deep,rem};
+}
+function zoneWeight(z){ z=(z||'').toString().toUpperCase();
+  if(z.includes('PEAK')||z.includes('ANAEROBIC')||z.includes('VO2'))return 3;
+  if(z.includes('CARDIO')||z.includes('VIGOROUS')||z.includes('AEROBIC'))return 2;
+  return 1; }
+function vo2Val(o){
+  if(o.vo2Max!=null){ const v=num(o.vo2Max); if(v!=null&&v>10&&v<100)return v; }  // 官方字段名
+  for(const k in o){ if(/vo2|milliliter|kilogram|maxmet/i.test(k)&&!/covar|variance/i.test(k)){ const v=num(o[k]); if(v!=null&&v>10&&v<100)return v; } }
+  for(const k in o){ if(k==='date')continue; const v=num(o[k]); if(v!=null&&v>=20&&v<=90)return v; }
+  return null;
 }
 
 /* ---------- parse -> per-day ---------- */
-function dstr(d){ if(!d)return null; if(typeof d==='object'&&d.year)return `${d.year}-${pad(d.month||1)}-${pad(d.day||1)}`;
-  const m=(''+d).match(/(\d{4})-(\d{2})-(\d{2})/); return m?`${m[1]}-${m[2]}-${m[3]}`:null; }
-function parseDurToMin(v){ if(v==null)return null; if(typeof v==='number')return Math.round(v/60);
-  const m=(''+v).match(/([\d.]+)\s*s/); if(m)return Math.round(parseFloat(m[1])/60);
-  const n=parseFloat(v); return isFinite(n)?Math.round(n/60):null; }
-function sleepMinutes(p){
-  const s=p.summary||{};
-  for(const k of ['sleepDuration','asleepDuration','totalSleepDuration','sleepTime','totalSleepTime']){
-    if(s[k]!=null){ const m=parseDurToMin(s[k]); if(m)return m; }
-  }
-  if(Array.isArray(p.stages)){
-    let sec=0,hit=false;
-    for(const st of p.stages){ const t=(st.type||st.stage||'').toString().toUpperCase();
-      if(t.includes('WAKE')||t.includes('AWAKE')||t.includes('OUT_OF_BED'))continue;
-      const a=st.startTime||st.interval?.startTime, b=st.endTime||st.interval?.endTime;
-      if(a&&b){ sec+=(new Date(b)-new Date(a))/1000; hit=true; } }
-    if(hit&&sec>0)return Math.round(sec/60);
-  }
-  const iv=p.interval||{}; const a=iv.startTime||iv.civilStartTime, b=iv.endTime||iv.civilEndTime;
-  if(a&&b)return Math.round((new Date(b)-new Date(a))/60000);
-  return null;
-}
 function buildDaily(hrvSrc){
   const days={};
-  const D=d=>days[d]||(days[d]={});
-  // 每条 dataPoint 外面包了一层：{ dataSource:{…}, <类型对象>:{…} }。取出非 dataSource 的那层。
-  const pay=p=>{ if(p&&typeof p==='object'){ for(const k in p){ if(k!=='dataSource'&&p[k]&&typeof p[k]==='object') return p[k]; } } return p; };
+  const D=d=>days[d]||(days[d]={azmLoad:0,steps:0});
   for(const p of lastRaw.hrv){ const o=pay(p); const d=dstr(o.date); if(!d)continue;
     const deep=o.deepSleepRootMeanSquareOfSuccessiveDifferencesMilliseconds, avg=o.averageHeartRateVariabilityMilliseconds;
     const v=hrvSrc==='avg'?(avg??deep):(deep??avg); if(v!=null)D(d).hrv=+v; }
-  for(const p of lastRaw.rhr){ const o=pay(p); const d=dstr(o.date); if(!d)continue; const v=parseFloat(o.beatsPerMinute); if(isFinite(v))D(d).rhr=v; }
-  for(const p of lastRaw.rr){ const o=pay(p); const d=dstr(o.date); if(!d)continue; const v=o.breathsPerMinute; if(v!=null)D(d).rr=+v; }
-  for(const p of lastRaw.sleep){ const o=pay(p); const iv=o.interval||{}; const d=dstr(iv.civilEndTime||iv.endTime); if(!d)continue;
-    const m=sleepMinutes(o); if(m!=null)D(d).sleep=(D(d).sleep||0)+m; }
-  return Object.keys(days).sort().map(d=>({date:d,hrv:days[d].hrv??null,rhr:days[d].rhr??null,rr:days[d].rr??null,sleep:days[d].sleep??null}));
+  for(const p of lastRaw.rhr){ const o=pay(p); const d=dstr(o.date); if(!d)continue; const v=num(o.beatsPerMinute); if(v!=null)D(d).rhr=v; }
+  for(const p of lastRaw.rr){ const o=pay(p); const d=dstr(o.date); if(!d)continue; const v=num(o.breathsPerMinute); if(v!=null)D(d).rr=v; }
+  for(const p of (lastRaw.sleep||[])){ const o=pay(p); const iv=o.interval||{}; const d=dstr(iv.civilEndTime||iv.endTime); if(!d)continue;
+    const s=sleepDetail(o); const day=D(d);
+    if(s.asleep!=null)day.sleep=(day.sleep||0)+s.asleep;
+    if(s.tib!=null)day.tib=(day.tib||0)+s.tib;
+    if(s.deep!=null)day.deep=(day.deep||0)+s.deep;
+    if(s.rem!=null)day.rem=(day.rem||0)+s.rem; }
+  for(const p of (lastRaw.azm||[])){ const o=pay(p); const iv=o.interval||{}; const d=dstr(iv.civilStartTime||iv.startTime); if(!d)continue;
+    const az=num(o.activeZoneMinutes); if(az!=null)D(d).azmLoad+=az*zoneWeight(o.heartRateZone); }
+  for(const p of (lastRaw.steps||[])){ const o=pay(p); const iv=o.interval||{}; const d=dstr(iv.civilStartTime||iv.startTime); if(!d)continue;
+    const c=num(o.count); if(c!=null)D(d).steps+=c; }
+  for(const p of (lastRaw.vo2||[])){ const o=pay(p); const d=dstr(o.date); if(!d)continue; const v=vo2Val(o); if(v!=null)D(d).vo2=v; }
+  return Object.keys(days).sort().map(d=>{ const x=days[d];
+    return {date:d, hrv:x.hrv??null, rhr:x.rhr??null, rr:x.rr??null, sleep:x.sleep??null, tib:x.tib??null,
+            deep:x.deep??null, rem:x.rem??null, azmLoad:x.azmLoad||null, steps:x.steps||null, vo2:x.vo2??null}; });
 }
 
-/* ---------- recovery math ---------- */
+/* ---------- math ---------- */
 const mean=a=>a.reduce((s,x)=>s+x,0)/a.length;
 function sd(a){ if(a.length<2)return null; const m=mean(a); return Math.sqrt(a.reduce((s,x)=>s+(x-m)*(x-m),0)/(a.length-1)); }
 const clamp=(x,lo,hi)=>Math.max(lo,Math.min(hi,x));
 function cfg(){ return {win:clamp(parseInt($("#win").value)||30,7,90),k:clamp(parseFloat($("#k").value)||1,0.3,3),
   wHrv:+$("#wHrv").value||0,wRhr:+$("#wRhr").value||0,wSleep:+$("#wSleep").value||0,wRr:+$("#wRr").value||0}; }
+
 function compute(daily,c){
-  const out=[];
   for(let i=0;i<daily.length;i++){
     const day=daily[i], hist=daily.slice(Math.max(0,i-c.win),i);
-    if(hist.length<7){ out.push({...day,recovery:null}); continue; }
-    const comps=[]; let zHrv=null,zRhr=null,zRr=null,zSleep=null;
+    day.recovery=null; day.zHrv=day.zRhr=day.zRr=day.zSleep=null;
+    if(hist.length<7) continue;
+    const comps=[];
     if(day.hrv!=null){ const b=hist.filter(h=>h.hrv!=null).map(h=>Math.log(h.hrv)),s=sd(b);
-      if(b.length>=7&&s){ zHrv=clamp((Math.log(day.hrv)-mean(b))/s,-4,4); comps.push([c.wHrv,zHrv]); } }
+      if(b.length>=7&&s){ day.zHrv=clamp((Math.log(day.hrv)-mean(b))/s,-4,4); comps.push([c.wHrv,day.zHrv]); } }
     if(day.rhr!=null){ const b=hist.filter(h=>h.rhr!=null).map(h=>h.rhr),s=sd(b);
-      if(b.length>=7&&s){ zRhr=clamp((mean(b)-day.rhr)/s,-4,4); comps.push([c.wRhr,zRhr]); } }
+      if(b.length>=7&&s){ day.zRhr=clamp((mean(b)-day.rhr)/s,-4,4); comps.push([c.wRhr,day.zRhr]); } }
     if(day.rr!=null){ const b=hist.filter(h=>h.rr!=null).map(h=>h.rr),s=sd(b);
-      if(b.length>=7&&s){ zRr=clamp((mean(b)-day.rr)/s,-4,4); comps.push([c.wRr,zRr]); } }
+      if(b.length>=7&&s){ day.zRr=clamp((mean(b)-day.rr)/s,-4,4); comps.push([c.wRr,day.zRr]); } }
     if(day.sleep!=null){ const b=hist.filter(h=>h.sleep!=null).map(h=>h.sleep),s=sd(b);
-      if(b.length>=7&&s){ zSleep=clamp((day.sleep-mean(b))/s,-4,4); comps.push([c.wSleep,zSleep]); } }
-    if(!comps.length){ out.push({...day,recovery:null,zHrv,zRhr,zRr,zSleep}); continue; }
+      if(b.length>=7&&s){ day.zSleep=clamp((day.sleep-mean(b))/s,-4,4); comps.push([c.wSleep,day.zSleep]); } }
+    if(!comps.length) continue;
     const wsum=comps.reduce((s,x)=>s+x[0],0), zc=comps.reduce((s,x)=>s+x[0]*x[1],0)/wsum;
-    out.push({...day,recovery:Math.round(100/(1+Math.exp(-c.k*zc))),zHrv,zRhr,zRr,zSleep});
+    day.recovery=Math.round(100/(1+Math.exp(-c.k*zc)));
   }
-  return out;
+  return daily;
 }
+// Sleep performance
+const SLEEP_NEED=480;
+function computeSleep(r){
+  if(r==null||r.sleep==null) return null;
+  const suff=clamp(r.sleep/SLEEP_NEED,0,1.05);
+  const eff=(r.tib&&r.tib>0)?clamp(r.sleep/r.tib,0,1):null;
+  const rest=(r.deep!=null&&r.rem!=null&&r.sleep>0)?clamp((r.deep+r.rem)/r.sleep/0.45,0,1):null;
+  const parts=[[0.6,suff]]; if(eff!=null)parts.push([0.2,eff]); if(rest!=null)parts.push([0.2,rest]);
+  const wsum=parts.reduce((s,p)=>s+p[0],0);
+  const score=clamp(Math.round(100*parts.reduce((s,p)=>s+p[0]*p[1],0)/wsum),0,100);
+  return {score,suff,eff,rest};
+}
+// Strain 0-21（对数刻度，按个人负荷上限自适应）
+function computeStrain(rows){
+  const loads=rows.map(r=>r.azmLoad).filter(v=>v!=null&&v>0);
+  const maxLoad=Math.max(30, loads.length?Math.max.apply(null,loads):30);
+  const L=maxLoad/2.35;
+  for(const r of rows){ r.strain=(r.azmLoad!=null)?Math.round(210*(1-Math.exp(-r.azmLoad/L)))/10:null; }
+}
+// Body Age
+function estVO2(r,age){ if(r.vo2!=null)return r.vo2; if(r.rhr!=null&&age){ const hrmax=220-age; return clamp(15.3*hrmax/r.rhr,20,80); } return null; }
+function avgField(rows,f){ const a=rows.map(r=>r[f]).filter(v=>v!=null&&isFinite(v)); return a.length?mean(a):null; }
+function fitnessAgeFromVO2(v){ return clamp(20+(48-v)/0.42,18,85); }
+function ageEstimate(rows,age){
+  const v=rows.map(r=>estVO2(r,age)).filter(x=>x!=null); if(!v.length)return null;
+  const vo2=mean(v), rhr=avgField(rows,'rhr'), steps=avgField(rows,'steps');
+  let a=fitnessAgeFromVO2(vo2);
+  if(rhr!=null)a+=clamp((rhr-60)*0.15,-4,6);
+  if(steps!=null)a+=clamp((7000-steps)/1800,-3,4);
+  if(age)a=clamp(a,age-15,age+20);
+  return {age:clamp(a,18,85),vo2,rhr,steps};
+}
+function computeBodyAge(rows){
+  const by=parseInt($("#birthYear").value); const age=(by&&by>1900)?(new Date().getFullYear()-by):null;
+  const recent=rows.slice(-30); const cur=ageEstimate(recent,age);
+  if(!cur) return {insufficient:true,age};
+  let pace=null;
+  if(rows.length>=45){ const prior=ageEstimate(rows.slice(-60,-30),age); if(prior)pace=cur.age-prior.age; }
+  return {ok:true, bodyAge:Math.round(cur.age), chronAge:age, vo2:cur.vo2, rhr:cur.rhr, steps:cur.steps, pace, hasVO2:recent.some(r=>r.vo2!=null)};
+}
+
 const band=r=>r>=67?'green':r>=34?'yellow':'red';
 const bandCol={green:'#16e07a',yellow:'#ffcb47',red:'#ff5c5c'};
 const bandTxt={green:'恢复良好',yellow:'适度',red:'需休息'};
+const sleepBandOf=s=>s>=85?['优秀','#16e07a']:s>=70?['尚可','#ffcb47']:['不足','#ff5c5c'];
+const strainBandOf=s=>s>=18?['极高','#ff5c5c']:s>=14?['偏高','#3fd8e0']:s>=10?['适中','#3fd8e0']:['轻松','#6f7d92'];
 
 /* ---------- render ---------- */
-function buildDailyAndRender(){ lastDaily=buildDaily($("#hrvSrc").value); render(compute(lastDaily,cfg())); }
+function buildDailyAndRender(){ lastDaily=buildDaily($("#hrvSrc").value); compute(lastDaily,cfg()); computeStrain(lastDaily);
+  lastDaily.forEach(r=>{ const si=computeSleep(r); r._sleep=si?si.score:null; r._sleepInfo=si; });
+  render(lastDaily); }
 $("#recompute").onclick=()=>{ if(lastRaw) buildDailyAndRender(); };
 
-const C=2*Math.PI*100; // ring circumference
+const RC=2*Math.PI*92, SC=2*Math.PI*50;
+function setRing(el,pct,col,circ){ el.setAttribute('stroke',col); el.style.transition='stroke-dashoffset .9s cubic-bezier(.4,0,.2,1)';
+  requestAnimationFrame(()=>{ el.style.strokeDashoffset=circ*(1-clamp(pct,0,1)); }); }
+
 function render(rows){
-  const scored=rows.filter(r=>r.recovery!=null);
   $("#out").classList.remove('hide');
   fillTable(rows);
-  if(!scored.length){
-    $("#score").textContent='--'; $("#bandName").textContent='数据不足';
-    $("#bandName").style.color='var(--muted)'; $("#ringArc").style.strokeDashoffset=C;
-    $("#heroSub").innerHTML=`还不够 7 天历史建立基线,暂时算不出。拉一个更长的区间(30–60 天)再试。已聚合 ${rows.length} 天。`;
-    $("#metrics").innerHTML=''; $("#chart").innerHTML=''; return;
+  if(!rows.length){ return; }
+  const last=rows[rows.length-1];
+  const scored=rows.filter(r=>r.recovery!=null);
+  lastScored=rows;
+
+  // Recovery
+  if(last.recovery!=null){
+    const b=band(last.recovery), col=bandCol[b];
+    $("#score").innerHTML=`${last.recovery}<small>%</small>`; $("#score").style.color=col;
+    $("#bandName").textContent=bandTxt[b]; $("#bandName").style.color=col;
+    setRing($("#ringArc"),last.recovery/100,col,RC);
+    $("#heroSub").innerHTML=`<b>${last.date}</b> · 近 ${scored.length} 天有分`;
+    const rr={green:'身体已充分恢复,今天可安排高强度训练或高压工作。',yellow:'恢复中等,适合中等强度,别再叠加太多压力。',red:'恢复不足,今天优先休息/低强度,补觉·补水·减压。'}[b];
+    $("#recRead").innerHTML=`<b>${rr}</b> 恢复度衡量身体今天「准备好了没」,主要看 HRV(占大头)、静息心率、睡眠、呼吸率相对你个人基线的偏移。`;
+  }else{
+    $("#score").textContent='--'; $("#bandName").textContent='建基线中'; $("#bandName").style.color='var(--muted)';
+    $("#ringArc").style.strokeDashoffset=RC;
+    $("#heroSub").innerHTML=`<b>${last.date}</b>`;
+    $("#recRead").textContent=`还不够 7 天历史建立基线,Recovery 暂时算不出。拉一个更长的区间(30–60 天)再试。已聚合 ${rows.length} 天。`;
   }
-  const last=scored[scored.length-1], b=band(last.recovery), col=bandCol[b];
-  $("#score").innerHTML=`${last.recovery}<small>%</small>`; $("#score").style.color=col;
-  $("#bandName").textContent=bandTxt[b]; $("#bandName").style.color=col;
-  const arc=$("#ringArc"); arc.setAttribute('stroke',col);
-  arc.style.transition='stroke-dashoffset .9s cubic-bezier(.4,0,.2,1)';
-  requestAnimationFrame(()=>{ arc.style.strokeDashoffset=C*(1-last.recovery/100); });
-  $("#heroSub").innerHTML=`<b>${last.date}</b> · 近 ${scored.length} 天有分`;
+
+  // Sleep
+  const si=last._sleepInfo;
+  if(si){ const [txt,col]=sleepBandOf(si.score);
+    $("#sleepScore").innerHTML=`${si.score}<small>%</small>`; $("#sleepScore").style.color=col;
+    $("#sleepBand").textContent=txt; $("#sleepBand").style.color=col;
+    setRing($("#sleepArc"),si.score/100,col,SC);
+    const parts=[`睡够度 ${Math.round(si.suff*100)}%`];
+    if(si.eff!=null)parts.push(`效率 ${Math.round(si.eff*100)}%`);
+    if(last.deep!=null&&last.rem!=null)parts.push(`深睡 ${last.deep}m·REM ${last.rem}m`);
+    $("#sleepRead").innerHTML=parts.join(' · ');
+  }else{ $("#sleepScore").textContent='--'; $("#sleepBand").textContent='无数据'; $("#sleepBand").style.color='var(--muted)';
+    $("#sleepArc").style.strokeDashoffset=SC; $("#sleepRead").textContent='昨夜没有睡眠记录。'; }
+
+  // Strain
+  if(last.strain!=null){ const [txt,col]=strainBandOf(last.strain);
+    $("#strainScore").textContent=last.strain.toFixed(1); $("#strainScore").style.color=col;
+    $("#strainBand").textContent=txt; $("#strainBand").style.color=col;
+    setRing($("#strainArc"),last.strain/21,col,SC);
+    $("#strainRead").innerHTML=`0–21 对数刻度,反映心血管累计消耗。理想是让 Strain 与 Recovery 匹配——恢复高的日子才上大强度。`;
+  }else{ $("#strainScore").textContent='--'; $("#strainBand").textContent='无数据'; $("#strainBand").style.color='var(--muted)';
+    $("#strainArc").style.strokeDashoffset=SC; $("#strainRead").textContent='今天没有活动区间数据(需授权活动数据)。'; }
+
+  renderBodyAge(computeBodyAge(rows));
   fillMetrics(last);
-  lastScored=scored; redrawChart();
+  fillDefs();
+  redrawChart();
 }
+
+function renderBodyAge(ba){
+  const el=$("#baBody");
+  if(!ba||ba.insufficient){
+    el.innerHTML=`<div class="read" style="margin:0">${ba&&ba.age?'':'先在 ⚙ 里填「出生年份」,'}再攒几天 VO₂max / 静息心率数据即可估算身体年龄。</div>`; return;
+  }
+  const chron=ba.chronAge; const diff=chron!=null?(ba.bodyAge-chron):null;
+  let deltaHtml='';
+  if(diff!=null){ const younger=diff<0; const col=younger?'#16e07a':diff>0?'#ff5c5c':'var(--muted)';
+    const bg=younger?'rgba(22,224,122,.14)':diff>0?'rgba(255,92,92,.14)':'var(--card2)';
+    deltaHtml=`<div class="baDelta" style="color:${col};background:${bg}">${younger?'比实际年轻':diff>0?'比实际偏老':'与实际持平'} ${Math.abs(diff)} 岁</div>`; }
+  // gauge scale
+  const lo=chron!=null?Math.max(18,chron-15):Math.max(18,ba.bodyAge-15);
+  const hi=chron!=null?chron+15:ba.bodyAge+15;
+  const posBody=clamp((ba.bodyAge-lo)/(hi-lo),0,1)*100;
+  const posChron=chron!=null?clamp((chron-lo)/(hi-lo),0,1)*100:null;
+  let paceHtml='';
+  if(ba.pace!=null){ const p=Math.round(ba.pace*10)/10; const younger=p<0;
+    const col=younger?'#16e07a':p>0?'#ff5c5c':'var(--muted)';
+    paceHtml=`<div class="read" style="margin-top:14px">近一个月趋势:<b style="color:${col}">${younger?'↓ 变年轻':p>0?'↑ 变老':'持平'} ${Math.abs(p)} 岁</b>(对比上一个月的 30 天均值)。</div>`; }
+  el.innerHTML=`
+    <div class="baTop">
+      <div class="baAge">${ba.bodyAge}<small>岁</small></div>
+      ${deltaHtml}
+    </div>
+    <div class="baGauge">
+      ${posChron!=null?`<div class="baTick" style="left:${posChron}%"></div>`:''}
+      <div class="baMark" style="left:${posBody}%"></div>
+    </div>
+    <div class="baScaleRow"><span>${lo} 岁</span>${chron!=null?`<span>实际 ${chron} 岁</span>`:''}<span>${hi} 岁</span></div>
+    <div class="baDrivers">
+      <div class="baDrv"><div class="k">VO₂max</div><div class="v">${ba.vo2?ba.vo2.toFixed(1):'–'}<small> ml/kg/min</small></div></div>
+      <div class="baDrv"><div class="k">静息心率</div><div class="v">${ba.rhr!=null?Math.round(ba.rhr):'–'}<small> bpm</small></div></div>
+      <div class="baDrv"><div class="k">日均步数</div><div class="v">${ba.steps!=null?(Math.round(ba.steps/100)/10)+'k':'–'}</div></div>
+    </div>
+    ${paceHtml}
+    <div class="read">身体年龄基于近 <b>30 天</b>的心肺适能(VO₂max${ba.hasVO2?'':',当前用静息心率+年龄反推'})、静息心率、日均步数综合估算,像 WHOOP 一样以<b>周</b>为尺度缓慢变化。它是趋势指标不是医学诊断——重点看它每月变年轻还是变老。</div>`;
+}
+
 function zColor(z){ return z==null?'var(--card2)':z>=0.15?'rgba(22,224,122,.16)':z<=-0.15?'rgba(255,92,92,.16)':'var(--card2)'; }
 function zText(z){ return z==null?'var(--muted)':z>=0.15?'#16e07a':z<=-0.15?'#ff5c5c':'var(--muted)'; }
-function tile(k,v,unit,z){
+function tile(k,v,unit,z,desc){
   const zc=z!=null?`<span class="zchip" style="background:${zColor(z)};color:${zText(z)}">z ${z>=0?'+':''}${z.toFixed(2)}</span>`:'';
-  return `<div class="tile"><div class="k">${k}</div><div class="v">${v}<small>${unit||''}</small></div>${zc}</div>`;
+  return `<div class="tile"><div class="k">${k}</div><div class="v">${v}<small>${unit||''}</small></div>${zc}<div class="d">${desc||''}</div></div>`;
 }
 function fillMetrics(d){
   const sl=d.sleep!=null?`${Math.floor(d.sleep/60)}<small>h</small>${Math.round(d.sleep%60)}`:'–';
   $("#metrics").innerHTML=
-    tile('心率变异 HRV', d.hrv!=null?d.hrv.toFixed(0):'–','ms',d.zHrv)+
-    tile('静息心率 RHR', d.rhr!=null?d.rhr.toFixed(0):'–','bpm',d.zRhr)+
-    tile('呼吸率', d.rr!=null?d.rr.toFixed(1):'–','/min',d.zRr)+
-    tile('睡眠', sl, d.sleep!=null?'m':'', d.zSleep);
+    tile('心率变异 HRV', d.hrv!=null?d.hrv.toFixed(0):'–','ms',d.zHrv,'心跳间隔的波动,越高通常越放松、恢复越好,是恢复分第一驱动。')+
+    tile('静息心率 RHR', d.rhr!=null?d.rhr.toFixed(0):'–','bpm',d.zRhr,'越低通常心肺越好;比基线升高常提示疲劳/压力/生病。')+
+    tile('呼吸率', d.rr!=null?d.rr.toFixed(1):'–','/min',d.zRr,'睡眠中每分钟呼吸次数,稳定最好;升高可能是压力或不适。')+
+    tile('睡眠时长', sl, d.sleep!=null?'':'', d.zSleep,'昨夜实际睡着时长(不含清醒/入睡)。')+
+    tile('步数', d.steps!=null?(Math.round(d.steps/100)/10+'k'):'–','',null,'当日活动量的粗略参考,计入身体年龄。')+
+    tile('VO₂max', d.vo2!=null?d.vo2.toFixed(1):'–','',null,'最大摄氧量,心肺适能核心;越高越「年轻」,是身体年龄的主锚。');
+}
+function fillDefs(){
+  $("#defs").innerHTML=`
+    <div><span class="term">Recovery 恢复度(0–100%)</span> — 身体今天「准备好了没」。HRV(占大头)+静息心率+睡眠+呼吸率各自相对你近 30 天基线求偏移,加权后映射。绿 ≥67 可上强度 / 黄 34–66 适度 / 红 &lt;34 该休息。</div>
+    <div><span class="term">Sleep 睡眠表现(0–100%)</span> — = 睡够度(实际睡眠 ÷ 8h 需求,占 60%)+ 睡眠效率(躺床时间里真正睡着的比例,20%)+ 修复占比(深睡+REM ÷ 总睡眠 ÷ 0.45,20%)。85+ 优秀 / 70–84 尚可 / &lt;70 不足。</div>
+    <div><span class="term">Strain 当日负荷(0–21,对数刻度)</span> — 心血管累计消耗,来自你在各心率区间停留的时间(高区间权重更大)。&lt;10 轻松 / 10–14 适中 / 14–18 偏高 / 18+ 极限。看它是否与当天 Recovery 匹配。</div>
+    <div><span class="term">Body Age 身体年龄</span> — 用 VO₂max(或静息心率+年龄反推)为主,叠加静息心率、日均步数,估出的心肺「体感年龄」。近 30 天滚动、每周尺度缓变。关注月度趋势而非绝对数。</div>
+    <div><span class="term">z 分</span> — 每个指标当天相对你个人基线偏离了几个标准差;绿色 chip=好的方向,红色=差的方向。它让分数因人而异,而不是套统一阈值。</div>`;
 }
 function fillTable(rows){
   const tb=$("#tbl tbody"); tb.innerHTML='';
   for(const r of [...rows].reverse()){ const rb=r.recovery!=null?band(r.recovery):null;
     tb.insertAdjacentHTML('beforeend',`<tr><td>${r.date.slice(5)}</td>
       <td>${r.recovery!=null?`<span class="dot" style="background:${bandCol[rb]}"></span>${r.recovery}`:'<span class="muted">—</span>'}</td>
+      <td>${r._sleep!=null?r._sleep:'–'}</td><td>${r.strain!=null?r.strain.toFixed(1):'–'}</td>
       <td>${r.hrv!=null?r.hrv.toFixed(0):'–'}</td><td>${r.rhr!=null?r.rhr.toFixed(0):'–'}</td>
-      <td>${r.rr!=null?r.rr.toFixed(1):'–'}</td><td>${r.sleep!=null?Math.round(r.sleep):'–'}</td>
-      <td>${r.zHrv!=null?r.zHrv.toFixed(2):'–'}</td><td>${r.zRhr!=null?r.zRhr.toFixed(2):'–'}</td></tr>`); }
+      <td>${r.sleep!=null?Math.round(r.sleep):'–'}</td><td>${r.steps!=null?Math.round(r.steps):'–'}</td></tr>`); }
 }
-function drawChart(scored){
-  const W=760,H=210,padL=26,padR=10,padT=14,bottom=22,n=scored.length;
-  const xs=i=>padL+(n<=1?0:(W-padL-padR)*i/(n-1)), ys=v=>padT+(H-padT-bottom)*(1-v/100);
+
+/* ---------- chart ---------- */
+function chartCfg(){
+  if(chartMetric==='sleep') return {max:100,color:'#16e07a',bands:[[0,69,'#ff5c5c'],[70,84,'#ffcb47'],[85,100,'#16e07a']],ticks:[0,50,70,85,100],pick:r=>r._sleep};
+  if(chartMetric==='strain') return {max:21,color:'#3fd8e0',bands:[[0,9,'#6f7d92'],[10,17,'#3fd8e0'],[18,21,'#ff5c5c']],ticks:[0,7,14,21],pick:r=>r.strain};
+  return {max:100,color:'#5aa9ff',bands:[[0,33,'#ff5c5c'],[34,66,'#ffcb47'],[67,100,'#16e07a']],ticks:[0,34,67,100],pick:r=>r.recovery,colorByBand:true};
+}
+function drawChart(series,cf){
+  const W=760,H=210,padL=26,padR=10,padT=14,bottom=22,n=series.length,M=cf.max;
+  if(!n){ $("#chart").innerHTML='<div class="note">该指标暂无数据。</div>'; return; }
+  const xs=i=>padL+(n<=1?0:(W-padL-padR)*i/(n-1)), ys=v=>padT+(H-padT-bottom)*(1-v/M);
   let svg=`<svg class="chart" viewBox="0 0 ${W} ${H}" preserveAspectRatio="none">`;
-  [[0,33,'#ff5c5c'],[34,66,'#ffcb47'],[67,100,'#16e07a']].forEach(([lo,hi,c])=>{
-    svg+=`<rect x="${padL}" y="${ys(hi)}" width="${W-padL-padR}" height="${ys(lo)-ys(hi)}" fill="${c}" opacity="0.07"/>`; });
-  [0,34,67,100].forEach(v=>{ svg+=`<line x1="${padL}" y1="${ys(v)}" x2="${W-padR}" y2="${ys(v)}" stroke="var(--line)"/>`;
+  cf.bands.forEach(([lo,hi,c])=>{ svg+=`<rect x="${padL}" y="${ys(hi)}" width="${W-padL-padR}" height="${ys(lo)-ys(hi)}" fill="${c}" opacity="0.07"/>`; });
+  cf.ticks.forEach(v=>{ svg+=`<line x1="${padL}" y1="${ys(v)}" x2="${W-padR}" y2="${ys(v)}" stroke="var(--line)"/>`;
     svg+=`<text x="${padL-5}" y="${ys(v)+4}" fill="var(--dim)" font-size="11" text-anchor="end">${v}</text>`; });
-  const area=scored.map((r,i)=>`${xs(i)},${ys(r.recovery)}`).join(' ');
-  svg+=`<polyline points="${xs(0)},${ys(0)} ${area} ${xs(n-1)},${ys(0)}" fill="url(#g)" opacity=".5"/>`;
-  svg+=`<defs><linearGradient id="g" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#5aa9ff" stop-opacity=".35"/><stop offset="1" stop-color="#5aa9ff" stop-opacity="0"/></linearGradient></defs>`;
-  let d=''; scored.forEach((r,i)=>{ d+=(i?'L':'M')+xs(i)+' '+ys(r.recovery)+' '; });
-  svg+=`<path d="${d}" fill="none" stroke="#5aa9ff" stroke-width="2.5"/>`;
-  scored.forEach((r,i)=>{ if(n<=40||i===n-1) svg+=`<circle cx="${xs(i)}" cy="${ys(r.recovery)}" r="${i===n-1?4:3}" fill="${bandCol[band(r.recovery)]}"/>`; });
-  [0,Math.floor((n-1)/2),n-1].forEach(i=>{ if(i>=0&&i<n) svg+=`<text x="${clamp(xs(i),padL+12,W-padR-12)}" y="${H-5}" fill="var(--dim)" font-size="11" text-anchor="middle">${scored[i].date.slice(5)}</text>`; });
+  const area=series.map((r,i)=>`${xs(i)},${ys(r.val)}`).join(' ');
+  svg+=`<defs><linearGradient id="g" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="${cf.color}" stop-opacity=".33"/><stop offset="1" stop-color="${cf.color}" stop-opacity="0"/></linearGradient></defs>`;
+  svg+=`<polyline points="${xs(0)},${ys(0)} ${area} ${xs(n-1)},${ys(0)}" fill="url(#g)"/>`;
+  let d=''; series.forEach((r,i)=>{ d+=(i?'L':'M')+xs(i)+' '+ys(r.val)+' '; });
+  svg+=`<path d="${d}" fill="none" stroke="${cf.color}" stroke-width="2.5"/>`;
+  series.forEach((r,i)=>{ if(n<=40||i===n-1){ const c=cf.colorByBand?bandCol[band(r.val)]:cf.color; svg+=`<circle cx="${xs(i)}" cy="${ys(r.val)}" r="${i===n-1?4:3}" fill="${c}"/>`; } });
+  [0,Math.floor((n-1)/2),n-1].forEach(i=>{ if(i>=0&&i<n) svg+=`<text x="${clamp(xs(i),padL+12,W-padR-12)}" y="${H-5}" fill="var(--dim)" font-size="11" text-anchor="middle">${series[i].date.slice(5)}</text>`; });
   $("#chart").innerHTML=svg+'</svg>';
 }
 function redrawChart(){
   if(!lastScored||!lastScored.length){ $("#chart").innerHTML=''; return; }
-  const s = activeRange>0 ? lastScored.slice(-activeRange) : lastScored;
-  drawChart(s);
+  const cf=chartCfg();
+  let s=lastScored.map(r=>({date:r.date,val:cf.pick(r)})).filter(x=>x.val!=null);
+  if(activeRange>0) s=s.slice(-activeRange);
+  drawChart(s,cf);
 }
 $("#ranges").onclick=e=>{ const btn=e.target.closest('button'); if(!btn)return;
   [...$("#ranges").children].forEach(b=>b.classList.remove('on')); btn.classList.add('on');
   activeRange=+btn.dataset.r; redrawChart(); };
+$("#metricSel").onclick=e=>{ const btn=e.target.closest('button'); if(!btn)return;
+  [...$("#metricSel").children].forEach(b=>b.classList.remove('on')); btn.classList.add('on');
+  chartMetric=btn.dataset.m; redrawChart(); };
 
-/* ---------- cache（Recovery 一天一更，存本地，打开先看缓存） ---------- */
+/* ---------- cache ---------- */
 function todayStr(){ const d=new Date(); return `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}`; }
 function fmt(d){ return `${pad(d.getMonth()+1)}-${pad(d.getDate())} ${pad(d.getHours())}:${pad(d.getMinutes())}`; }
 function saveCache(from,to){ try{ localStorage.setItem('ghCache',JSON.stringify({at:new Date().toISOString(),from,to,raw:lastRaw})); }catch(e){}
@@ -441,16 +745,16 @@ function saveCache(from,to){ try{ localStorage.setItem('ghCache',JSON.stringify(
 function loadCacheAndRender(){
   let c; try{ c=JSON.parse(localStorage.getItem('ghCache')||'null'); }catch(e){ c=null; }
   if(!c||!c.raw) return;
-  lastRaw=c.raw; $("#raw").textContent=JSON.stringify(lastRaw,null,1);
+  lastRaw=c.raw; ['hrv','rhr','rr','sleep','azm','steps','vo2'].forEach(k=>{ if(!lastRaw[k])lastRaw[k]=[]; });
+  $("#raw").textContent=JSON.stringify(lastRaw,null,1);
   buildDailyAndRender();
   $("#recompute").disabled=false; $("#refetch").classList.remove("hide");
   cachedLatest=(lastDaily&&lastDaily.length)?lastDaily[lastDaily.length-1].date:null;
   const at=c.at?new Date(c.at):null; $("#who").textContent='缓存 · 更新于 '+(at?fmt(at):'—');
 }
 
-/* ---------- boot：先秒显缓存，再决定要不要静默更新 ---------- */
+/* ---------- boot ---------- */
 loadCacheAndRender();
-
 </script>
 </body>
 </html>
