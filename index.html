@@ -1,0 +1,327 @@
+<!doctype html>
+<html lang="zh">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Recovery · Fitbit Air</title>
+<script src="https://accounts.google.com/gsi/client" async defer></script>
+<style>
+  :root{
+    --bg:#0d1117; --panel:#161b22; --panel2:#1c2230; --line:#2a3038;
+    --txt:#e6edf3; --muted:#8b949e; --accent:#4aa8ff;
+    --green:#2ec95c; --yellow:#f5c451; --red:#f0623f;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--txt);
+    font:15px/1.55 -apple-system,BlinkMacSystemFont,"Segoe UI","PingFang SC","Microsoft YaHei",sans-serif;}
+  .wrap{max-width:960px;margin:0 auto;padding:24px 16px 80px}
+  h1{font-size:22px;margin:0 0 4px}
+  .sub{color:var(--muted);font-size:13px;margin:0 0 22px}
+  .card{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:16px 18px;margin-bottom:16px}
+  .card h2{font-size:13px;text-transform:uppercase;letter-spacing:.05em;color:var(--muted);margin:0 0 14px}
+  label{display:block;font-size:12px;color:var(--muted);margin:0 0 4px}
+  input,select{width:100%;background:var(--panel2);color:var(--txt);border:1px solid var(--line);
+    border-radius:8px;padding:9px 10px;font-size:14px}
+  .grid{display:grid;gap:12px}
+  .g2{grid-template-columns:1fr 1fr}.g3{grid-template-columns:1fr 1fr 1fr}.g4{grid-template-columns:repeat(4,1fr)}
+  @media(max-width:620px){.g3,.g4{grid-template-columns:1fr 1fr}}
+  .btn{background:var(--accent);color:#06243f;border:0;border-radius:8px;padding:11px 18px;font-weight:600;
+    font-size:15px;cursor:pointer}
+  .btn:disabled{opacity:.45;cursor:not-allowed}
+  .btn.ghost{background:transparent;border:1px solid var(--line);color:var(--txt);font-weight:500;padding:9px 14px;font-size:14px}
+  .row{display:flex;gap:10px;align-items:center;flex-wrap:wrap}
+  .hero{display:flex;align-items:center;gap:24px;flex-wrap:wrap}
+  .score{font-size:70px;font-weight:800;line-height:1;letter-spacing:-.03em}
+  .score small{font-size:24px;font-weight:600;opacity:.7}
+  .badge{display:inline-block;padding:3px 12px;border-radius:999px;font-size:13px;font-weight:600}
+  .heroMeta{color:var(--muted);font-size:13px}.heroMeta b{color:var(--txt);font-weight:600}
+  table{width:100%;border-collapse:collapse;font-size:13px}
+  th,td{text-align:right;padding:7px 8px;border-bottom:1px solid var(--line);white-space:nowrap}
+  th:first-child,td:first-child{text-align:left}
+  th{color:var(--muted);font-weight:500;font-size:12px}
+  .dot{display:inline-block;width:8px;height:8px;border-radius:50%;margin-right:6px;vertical-align:middle}
+  .muted{color:var(--muted)}.note{font-size:12px;color:var(--muted);margin-top:10px}
+  .hide{display:none}.tablewrap{overflow-x:auto}
+  svg{display:block;width:100%;height:auto}
+  a{color:var(--accent)}
+  .status{font-size:13px;padding:9px 12px;border-radius:8px;margin-top:12px}
+  .status.err{background:#3a1512;border:1px solid #6b241a;color:#f0623f;white-space:pre-wrap;word-break:break-word}
+  .status.ok{background:#0f2a17;border:1px solid #1e5231;color:#2ec95c}
+  .status.info{background:#12233a;border:1px solid #1e3f66;color:#4aa8ff}
+  .pill{font-size:11px;color:var(--muted);border:1px solid var(--line);border-radius:999px;padding:2px 9px}
+  details summary{cursor:pointer;color:var(--muted);font-size:13px}
+  code{background:var(--panel2);padding:1px 6px;border-radius:5px;font-size:12px}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>Recovery <span class="pill">Fitbit Air · Google Health</span></h1>
+  <p class="sub">一键 Google 登录,自动拉取 HRV / 静息心率 / 呼吸率 / 睡眠,算出 WHOOP 式恢复分。数据只在你浏览器里,不上传任何服务器。</p>
+
+  <!-- Connect -->
+  <div class="card">
+    <h2>连接</h2>
+    <div class="grid g2" style="align-items:end">
+      <div>
+        <label>OAuth Client ID(你在 GCP 创建的 Web 客户端,粘贴一次即记住)</label>
+        <input id="clientId" placeholder="xxxxxx.apps.googleusercontent.com">
+      </div>
+      <div class="grid g2">
+        <div><label>起始日期</label><input type="date" id="from"></div>
+        <div><label>结束日期</label><input type="date" id="to"></div>
+      </div>
+    </div>
+    <div class="row" style="margin-top:14px">
+      <button class="btn" id="signin" disabled>用 Google 登录并拉取</button>
+      <button class="btn ghost" id="refetch" disabled>重新拉取</button>
+      <span class="muted" id="who"></span>
+    </div>
+    <div id="status"></div>
+    <details style="margin-top:12px"><summary>参数 & 首次设置说明</summary>
+      <div class="note" style="margin-top:10px">
+        需要的 scope(只读):<code>googlehealth.health_metrics_and_measurements.readonly</code> + <code>googlehealth.sleep.readonly</code>。<br>
+        在 GCP「Google Auth 平台 → 客户端」建 <b>Web application</b> 客户端,Authorized JavaScript origin 填你部署这个页面的地址(如 <code>https://carycheung.github.io</code>);把自己加进 Test users;发布状态留 Testing 即可。
+      </div>
+    </details>
+  </div>
+
+  <!-- Tuning -->
+  <div class="card">
+    <h2>算法参数(默认取 WHOOP 社区共识,可调后按“重新拉取/重算”)</h2>
+    <div class="grid g4">
+      <div><label>基线窗口(天)</label><input type="number" id="win" value="30" min="7" max="90"></div>
+      <div><label>灵敏度 k</label><input type="number" id="k" value="1.0" step="0.1" min="0.3" max="3"></div>
+      <div><label>HRV 权重</label><input type="number" id="wHrv" value="0.55" step="0.05"></div>
+      <div><label>RHR 权重</label><input type="number" id="wRhr" value="0.25" step="0.05"></div>
+      <div><label>睡眠 权重</label><input type="number" id="wSleep" value="0.12" step="0.05"></div>
+      <div><label>呼吸率 权重</label><input type="number" id="wRr" value="0.08" step="0.05"></div>
+      <div style="grid-column:span 2"><label>HRV 取值</label>
+        <select id="hrvSrc">
+          <option value="deep">深睡 rMSSD(最接近 WHOOP)</option>
+          <option value="avg">全天平均 rMSSD</option>
+        </select>
+      </div>
+    </div>
+    <div class="note">各指标(HRV 用 ln rmssd,RHR/呼吸取反)对滚动基线求 z 分,加权后 logistic 映射 0–100%。绿 ≥67 / 黄 34–66 / 红 &lt;34。需 ≥7 天历史建基线。</div>
+    <div class="row" style="margin-top:12px"><button class="btn ghost" id="recompute" disabled>用当前数据重算</button></div>
+  </div>
+
+  <!-- Output -->
+  <div id="out" class="hide">
+    <div class="card">
+      <h2>最新一天</h2>
+      <div class="hero">
+        <div class="score" id="bigScore">--</div>
+        <div>
+          <div id="bigBadge" class="badge">—</div>
+          <div class="heroMeta" id="bigDate" style="margin-top:8px"></div>
+          <div class="heroMeta" id="bigBreak"></div>
+        </div>
+      </div>
+      <div id="warnBox"></div>
+    </div>
+    <div class="card"><h2>趋势</h2><div id="chart"></div></div>
+    <div class="card">
+      <h2>逐日明细</h2>
+      <div class="tablewrap"><table id="tbl">
+        <thead><tr><th>日期</th><th>Recovery</th><th>HRV</th><th>RHR</th><th>呼吸率</th><th>睡眠(分)</th><th>zHRV</th><th>zRHR</th></tr></thead>
+        <tbody></tbody>
+      </table></div>
+      <div class="note">前若干天用于建立基线,不出分。</div>
+    </div>
+    <div class="card"><details><summary>调试:原始 API 数据(JSON)</summary><pre id="raw" style="overflow:auto;max-height:320px;font-size:11px;color:var(--muted)"></pre></details></div>
+  </div>
+</div>
+
+<script>
+"use strict";
+const $=s=>document.querySelector(s);
+const SCOPES='https://www.googleapis.com/auth/googlehealth.health_metrics_and_measurements.readonly https://www.googleapis.com/auth/googlehealth.sleep.readonly';
+const API='https://health.googleapis.com/v4/users/me/dataTypes';
+let tokenClient=null, accessToken=null, lastRaw=null, lastDaily=null;
+
+/* ---------- init defaults ---------- */
+(function(){
+  const savedId=localStorage.getItem('ghClientId'); if(savedId)$("#clientId").value=savedId;
+  const today=new Date(); const from=new Date(); from.setDate(today.getDate()-60);
+  $("#to").value=today.toISOString().slice(0,10);
+  $("#from").value=from.toISOString().slice(0,10);
+})();
+function setStatus(msg,kind){ const el=$("#status"); if(!msg){el.className='';el.textContent='';return;} el.className='status '+(kind||'info'); el.textContent=msg; }
+
+/* ---------- Google Identity Services ---------- */
+function ensureClient(){
+  const cid=$("#clientId").value.trim();
+  if(!cid){ setStatus('先粘贴你的 OAuth Client ID','err'); return null; }
+  localStorage.setItem('ghClientId',cid);
+  if(!window.google||!google.accounts||!google.accounts.oauth2){ setStatus('Google 库还没加载好,稍等一秒再点','err'); return null; }
+  if(!tokenClient || tokenClient._cid!==cid){
+    tokenClient=google.accounts.oauth2.initTokenClient({
+      client_id:cid, scope:SCOPES,
+      callback:(resp)=>{
+        if(resp.error){ setStatus('授权失败:'+resp.error+(resp.error_description?' — '+resp.error_description:''),'err'); return; }
+        accessToken=resp.access_token;
+        $("#refetch").disabled=false; $("#who").textContent='已授权';
+        fetchAll();
+      }
+    });
+    tokenClient._cid=cid;
+  }
+  return tokenClient;
+}
+$("#signin").onclick=()=>{ const c=ensureClient(); if(c){ setStatus('等待 Google 授权弹窗…','info'); c.requestAccessToken({prompt: accessToken?'':'consent'}); } };
+$("#refetch").onclick=()=>{ if(accessToken) fetchAll(); else $("#signin").click(); };
+// enable button once GIS script is present
+const gisTimer=setInterval(()=>{ if(window.google&&google.accounts&&google.accounts.oauth2){ $("#signin").disabled=false; clearInterval(gisTimer); } },300);
+
+/* ---------- fetch ---------- */
+const pad=n=>String(n).padStart(2,'0');
+async function apiList(type,filter){
+  let out=[],pageToken='';
+  do{
+    const u=new URL(`${API}/${type}/dataPoints`);
+    u.searchParams.set('filter',filter);
+    if(pageToken)u.searchParams.set('pageToken',pageToken);
+    const r=await fetch(u,{headers:{Authorization:'Bearer '+accessToken}});
+    if(!r.ok){ const t=await r.text(); throw new Error(`${type} → HTTP ${r.status}\n${t.slice(0,300)}`); }
+    const j=await r.json();
+    (j.dataPoints||[]).forEach(p=>out.push(p));
+    pageToken=j.nextPageToken||'';
+  }while(pageToken);
+  return out;
+}
+async function fetchAll(){
+  const from=$("#from").value, to=$("#to").value;
+  if(!from||!to){ setStatus('选一下起止日期','err'); return; }
+  const toEx=new Date(to); toEx.setDate(toEx.getDate()+1); const toExS=toEx.toISOString().slice(0,10);
+  const F=(res,field)=>`${res}.${field} >= "${from}" AND ${res}.${field} < "${toExS}"`;
+  const Fsleep=`sleep.interval.civil_end_time >= "${from}T00:00:00" AND sleep.interval.civil_end_time < "${toExS}T00:00:00"`;
+  setStatus('拉取中…','info');
+  try{
+    const [hrv,rhr,rr,sleep]=await Promise.all([
+      apiList('daily-heart-rate-variability',F('daily_heart_rate_variability','date')),
+      apiList('daily-resting-heart-rate',F('daily_resting_heart_rate','date')),
+      apiList('daily-respiratory-rate',F('daily_respiratory_rate','date')),
+      apiList('sleep',Fsleep),
+    ]);
+    lastRaw={hrv,rhr,rr,sleep};
+    $("#raw").textContent=JSON.stringify(lastRaw,null,1);
+    const n=hrv.length+rhr.length+rr.length+sleep.length;
+    if(!n){ setStatus('授权成功,但这个日期区间没拉到任何数据。换个更近/更宽的区间,或确认手环数据已同步到 Google Health。','err'); return; }
+    setStatus(`拉到:HRV ${hrv.length} · RHR ${rhr.length} · 呼吸 ${rr.length} · 睡眠 ${sleep.length} 条`,'ok');
+    buildDailyAndRender();
+    $("#recompute").disabled=false;
+  }catch(e){ setStatus('拉取出错:\n'+e.message,'err'); }
+}
+
+/* ---------- parse -> per-day ---------- */
+function dstr(d){ if(!d)return null; if(typeof d==='object'&&d.year)return `${d.year}-${pad(d.month||1)}-${pad(d.day||1)}`;
+  const m=(''+d).match(/(\d{4})-(\d{2})-(\d{2})/); return m?`${m[1]}-${m[2]}-${m[3]}`:null; }
+function parseDurToMin(v){ if(v==null)return null; if(typeof v==='number')return Math.round(v/60);
+  const m=(''+v).match(/([\d.]+)\s*s/); if(m)return Math.round(parseFloat(m[1])/60);
+  const n=parseFloat(v); return isFinite(n)?Math.round(n/60):null; }
+function sleepMinutes(p){
+  const s=p.summary||{};
+  for(const k of ['sleepDuration','asleepDuration','totalSleepDuration','sleepTime','totalSleepTime']){
+    if(s[k]!=null){ const m=parseDurToMin(s[k]); if(m)return m; }
+  }
+  if(Array.isArray(p.stages)){
+    let sec=0,hit=false;
+    for(const st of p.stages){ const t=(st.type||st.stage||'').toString().toUpperCase();
+      if(t.includes('WAKE')||t.includes('AWAKE')||t.includes('OUT_OF_BED'))continue;
+      const a=st.startTime||st.interval?.startTime, b=st.endTime||st.interval?.endTime;
+      if(a&&b){ sec+=(new Date(b)-new Date(a))/1000; hit=true; } }
+    if(hit&&sec>0)return Math.round(sec/60);
+  }
+  const iv=p.interval||{}; const a=iv.startTime||iv.civilStartTime, b=iv.endTime||iv.civilEndTime;
+  if(a&&b)return Math.round((new Date(b)-new Date(a))/60000);
+  return null;
+}
+function buildDaily(hrvSrc){
+  const days={};
+  const D=d=>days[d]||(days[d]={});
+  for(const p of lastRaw.hrv){ const d=dstr(p.date); if(!d)continue;
+    const deep=p.deepSleepRootMeanSquareOfSuccessiveDifferencesMilliseconds, avg=p.averageHeartRateVariabilityMilliseconds;
+    const v=hrvSrc==='avg'?(avg??deep):(deep??avg); if(v!=null)D(d).hrv=+v; }
+  for(const p of lastRaw.rhr){ const d=dstr(p.date); if(!d)continue; const v=parseFloat(p.beatsPerMinute); if(isFinite(v))D(d).rhr=v; }
+  for(const p of lastRaw.rr){ const d=dstr(p.date); if(!d)continue; const v=p.breathsPerMinute; if(v!=null)D(d).rr=+v; }
+  for(const p of lastRaw.sleep){ const iv=p.interval||{}; const d=dstr(iv.civilEndTime||iv.endTime); if(!d)continue;
+    const m=sleepMinutes(p); if(m!=null)D(d).sleep=(D(d).sleep||0)+m; }
+  return Object.keys(days).sort().map(d=>({date:d,hrv:days[d].hrv??null,rhr:days[d].rhr??null,rr:days[d].rr??null,sleep:days[d].sleep??null}));
+}
+
+/* ---------- recovery math ---------- */
+const mean=a=>a.reduce((s,x)=>s+x,0)/a.length;
+function sd(a){ if(a.length<2)return null; const m=mean(a); return Math.sqrt(a.reduce((s,x)=>s+(x-m)*(x-m),0)/(a.length-1)); }
+const clamp=(x,lo,hi)=>Math.max(lo,Math.min(hi,x));
+function cfg(){ return {win:clamp(parseInt($("#win").value)||30,7,90),k:clamp(parseFloat($("#k").value)||1,0.3,3),
+  wHrv:+$("#wHrv").value||0,wRhr:+$("#wRhr").value||0,wSleep:+$("#wSleep").value||0,wRr:+$("#wRr").value||0}; }
+function compute(daily,c){
+  const out=[];
+  for(let i=0;i<daily.length;i++){
+    const day=daily[i], hist=daily.slice(Math.max(0,i-c.win),i);
+    if(hist.length<7){ out.push({...day,recovery:null}); continue; }
+    const comps=[]; let zHrv=null,zRhr=null;
+    if(day.hrv!=null){ const b=hist.filter(h=>h.hrv!=null).map(h=>Math.log(h.hrv)),s=sd(b);
+      if(b.length>=7&&s){ zHrv=clamp((Math.log(day.hrv)-mean(b))/s,-4,4); comps.push([c.wHrv,zHrv]); } }
+    if(day.rhr!=null){ const b=hist.filter(h=>h.rhr!=null).map(h=>h.rhr),s=sd(b);
+      if(b.length>=7&&s){ zRhr=clamp((mean(b)-day.rhr)/s,-4,4); comps.push([c.wRhr,zRhr]); } }
+    if(day.rr!=null){ const b=hist.filter(h=>h.rr!=null).map(h=>h.rr),s=sd(b);
+      if(b.length>=7&&s){ comps.push([c.wRr,clamp((mean(b)-day.rr)/s,-4,4)]); } }
+    if(day.sleep!=null){ const b=hist.filter(h=>h.sleep!=null).map(h=>h.sleep),s=sd(b);
+      if(b.length>=7&&s){ comps.push([c.wSleep,clamp((day.sleep-mean(b))/s,-4,4)]); } }
+    if(!comps.length){ out.push({...day,recovery:null,zHrv,zRhr}); continue; }
+    const wsum=comps.reduce((s,x)=>s+x[0],0), zc=comps.reduce((s,x)=>s+x[0]*x[1],0)/wsum;
+    out.push({...day,recovery:Math.round(100/(1+Math.exp(-c.k*zc))),zHrv,zRhr});
+  }
+  return out;
+}
+const band=r=>r>=67?'green':r>=34?'yellow':'red';
+const bandCol={green:'var(--green)',yellow:'var(--yellow)',red:'var(--red)'};
+const bandTxt={green:'恢复良好',yellow:'适度',red:'需休息'};
+
+/* ---------- render ---------- */
+function buildDailyAndRender(){ lastDaily=buildDaily($("#hrvSrc").value); render(compute(lastDaily,cfg())); }
+$("#recompute").onclick=()=>{ if(lastRaw) buildDailyAndRender(); };
+function render(rows){
+  const scored=rows.filter(r=>r.recovery!=null);
+  $("#out").classList.remove('hide');
+  const warn=$("#warnBox"); warn.innerHTML='';
+  if(!scored.length){
+    warn.innerHTML=`<div class="status err" style="margin-top:12px">还不够 7 天历史来建立基线,暂时算不出恢复分。拉一个更长的区间(比如 30–60 天)再试。当前已聚合 ${rows.length} 天。</div>`;
+    $("#bigScore").textContent='--'; $("#bigBadge").textContent='—'; $("#bigBadge").style.background='var(--line)';
+    $("#chart").innerHTML=''; $("#tbl tbody").innerHTML=''; fillTable(rows); return;
+  }
+  const last=scored[scored.length-1], b=band(last.recovery);
+  $("#bigScore").innerHTML=`${last.recovery}<small>%</small>`; $("#bigScore").style.color=bandCol[b];
+  const badge=$("#bigBadge"); badge.textContent=bandTxt[b]; badge.style.background=bandCol[b]; badge.style.color='#06243f';
+  $("#bigDate").innerHTML=`日期 <b>${last.date}</b> · 近 ${scored.length} 天有分`;
+  $("#bigBreak").innerHTML=`HRV <b>${last.hrv?.toFixed(0)??'–'}ms</b> (z ${last.zHrv?.toFixed(2)??'–'}) · RHR <b>${last.rhr?.toFixed(0)??'–'}</b> (z ${last.zRhr?.toFixed(2)??'–'}) · 睡眠 <b>${last.sleep?Math.round(last.sleep)+'分':'–'}</b>`;
+  drawChart(scored); fillTable(rows);
+}
+function fillTable(rows){
+  const tb=$("#tbl tbody"); tb.innerHTML='';
+  for(const r of [...rows].reverse()){ const rb=r.recovery!=null?band(r.recovery):null;
+    tb.insertAdjacentHTML('beforeend',`<tr><td>${r.date}</td>
+      <td>${r.recovery!=null?`<span class="dot" style="background:${bandCol[rb]}"></span>${r.recovery}%`:'<span class="muted">建基线</span>'}</td>
+      <td>${r.hrv!=null?r.hrv.toFixed(0):'–'}</td><td>${r.rhr!=null?r.rhr.toFixed(0):'–'}</td>
+      <td>${r.rr!=null?r.rr.toFixed(1):'–'}</td><td>${r.sleep!=null?Math.round(r.sleep):'–'}</td>
+      <td>${r.zHrv!=null?r.zHrv.toFixed(2):'–'}</td><td>${r.zRhr!=null?r.zRhr.toFixed(2):'–'}</td></tr>`); }
+}
+function drawChart(scored){
+  const W=900,H=250,pad=34,bottom=24,n=scored.length;
+  const xs=i=>pad+(n<=1?0:(W-pad*2)*i/(n-1)), ys=v=>pad+(H-pad-bottom)*(1-v/100);
+  let svg=`<svg viewBox="0 0 ${W} ${H}" preserveAspectRatio="xMidYMid meet">`;
+  [[0,33,'var(--red)'],[34,66,'var(--yellow)'],[67,100,'var(--green)']].forEach(([lo,hi,c])=>{
+    svg+=`<rect x="${pad}" y="${ys(hi)}" width="${W-pad*2}" height="${ys(lo)-ys(hi)}" fill="${c}" opacity="0.08"/>`; });
+  [0,34,67,100].forEach(v=>{ svg+=`<line x1="${pad}" y1="${ys(v)}" x2="${W-pad}" y2="${ys(v)}" stroke="var(--line)"/>`;
+    svg+=`<text x="${pad-6}" y="${ys(v)+4}" fill="var(--muted)" font-size="11" text-anchor="end">${v}</text>`; });
+  let d=''; scored.forEach((r,i)=>{ d+=(i?'L':'M')+xs(i)+' '+ys(r.recovery)+' '; });
+  svg+=`<path d="${d}" fill="none" stroke="var(--accent)" stroke-width="2"/>`;
+  scored.forEach((r,i)=>{ svg+=`<circle cx="${xs(i)}" cy="${ys(r.recovery)}" r="3.5" fill="${bandCol[band(r.recovery)]}"/>`; });
+  [0,Math.floor((n-1)/2),n-1].forEach(i=>{ if(i>=0&&i<n) svg+=`<text x="${xs(i)}" y="${H-6}" fill="var(--muted)" font-size="11" text-anchor="middle">${scored[i].date.slice(5)}</text>`; });
+  $("#chart").innerHTML=svg+'</svg>';
+}
+</script>
+</body>
+</html>
