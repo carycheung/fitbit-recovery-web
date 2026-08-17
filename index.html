@@ -317,13 +317,15 @@ function sleepMinutes(p){
 function buildDaily(hrvSrc){
   const days={};
   const D=d=>days[d]||(days[d]={});
-  for(const p of lastRaw.hrv){ const d=dstr(p.date); if(!d)continue;
-    const deep=p.deepSleepRootMeanSquareOfSuccessiveDifferencesMilliseconds, avg=p.averageHeartRateVariabilityMilliseconds;
+  // 每条 dataPoint 外面包了一层：{ dataSource:{…}, <类型对象>:{…} }。取出非 dataSource 的那层。
+  const pay=p=>{ if(p&&typeof p==='object'){ for(const k in p){ if(k!=='dataSource'&&p[k]&&typeof p[k]==='object') return p[k]; } } return p; };
+  for(const p of lastRaw.hrv){ const o=pay(p); const d=dstr(o.date); if(!d)continue;
+    const deep=o.deepSleepRootMeanSquareOfSuccessiveDifferencesMilliseconds, avg=o.averageHeartRateVariabilityMilliseconds;
     const v=hrvSrc==='avg'?(avg??deep):(deep??avg); if(v!=null)D(d).hrv=+v; }
-  for(const p of lastRaw.rhr){ const d=dstr(p.date); if(!d)continue; const v=parseFloat(p.beatsPerMinute); if(isFinite(v))D(d).rhr=v; }
-  for(const p of lastRaw.rr){ const d=dstr(p.date); if(!d)continue; const v=p.breathsPerMinute; if(v!=null)D(d).rr=+v; }
-  for(const p of lastRaw.sleep){ const iv=p.interval||{}; const d=dstr(iv.civilEndTime||iv.endTime); if(!d)continue;
-    const m=sleepMinutes(p); if(m!=null)D(d).sleep=(D(d).sleep||0)+m; }
+  for(const p of lastRaw.rhr){ const o=pay(p); const d=dstr(o.date); if(!d)continue; const v=parseFloat(o.beatsPerMinute); if(isFinite(v))D(d).rhr=v; }
+  for(const p of lastRaw.rr){ const o=pay(p); const d=dstr(o.date); if(!d)continue; const v=o.breathsPerMinute; if(v!=null)D(d).rr=+v; }
+  for(const p of lastRaw.sleep){ const o=pay(p); const iv=o.interval||{}; const d=dstr(iv.civilEndTime||iv.endTime); if(!d)continue;
+    const m=sleepMinutes(o); if(m!=null)D(d).sleep=(D(d).sleep||0)+m; }
   return Object.keys(days).sort().map(d=>({date:d,hrv:days[d].hrv??null,rhr:days[d].rhr??null,rr:days[d].rr??null,sleep:days[d].sleep??null}));
 }
 
