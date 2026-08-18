@@ -770,16 +770,20 @@ function render(rows){
   fillTable(rows);
   if(!rows.length){ return; }
   const last=rows[rows.length-1];
+  // 每个指标各自回落到"最近一个有该指标的日期"(睡眠属昨晚,今天早上常没有→显示最近一晚,并标注日期)
+  const lastWith=(f)=>{ for(let i=rows.length-1;i>=0;i--){ if(rows[i][f]!=null) return rows[i]; } return null; };
+  const dayTag=(r)=>r&&r.date!==last.date?` · <span style="color:var(--muted)">${r.date}</span>`:'';
   const scored=rows.filter(r=>r.recovery!=null);
   lastScored=rows;
 
-  // Recovery
-  if(last.recovery!=null){
-    const b=band(last.recovery), col=bandCol[b];
-    $("#score").innerHTML=`${last.recovery}<small>%</small>`; $("#score").style.color=col;
+  // Recovery(回落到最近有分的一天)
+  const recDay=lastWith('recovery');
+  if(recDay){
+    const b=band(recDay.recovery), col=bandCol[b];
+    $("#score").innerHTML=`${recDay.recovery}<small>%</small>`; $("#score").style.color=col;
     $("#bandName").textContent=bandTxt[b]; $("#bandName").style.color=col;
-    setRing($("#ringArc"),last.recovery/100,col,RC);
-    $("#heroSub").innerHTML=`<b>${last.date}</b> · 近 ${scored.length} 天有分`;
+    setRing($("#ringArc"),recDay.recovery/100,col,RC);
+    $("#heroSub").innerHTML=`<b>${recDay.date}</b> · 近 ${scored.length} 天有分`;
     const rr={green:'身体已充分恢复,今天可安排高强度训练或高压工作。',yellow:'恢复中等,适合中等强度,别再叠加太多压力。',red:'恢复不足,今天优先休息/低强度,补觉·补水·减压。'}[b];
     $("#recRead").innerHTML=`<b>${rr}</b> 恢复度衡量身体今天「准备好了没」,主要看 HRV(占大头)、静息心率、睡眠、呼吸率相对你个人基线的偏移。`;
   }else{
@@ -789,27 +793,28 @@ function render(rows){
     $("#recRead").textContent=`还不够 7 天历史建立基线,Recovery 暂时算不出。拉一个更长的区间(30–60 天)再试。已聚合 ${rows.length} 天。`;
   }
 
-  // Sleep
-  const si=last._sleepInfo;
+  // Sleep(回落到最近一晚,明确标注是哪天醒来的)
+  const sleepDay=lastWith('_sleep'); const si=sleepDay?sleepDay._sleepInfo:null;
   if(si){ const [txt,col]=sleepBandOf(si.score);
     $("#sleepScore").innerHTML=`${si.score}<small>%</small>`; $("#sleepScore").style.color=col;
     $("#sleepBand").textContent=txt; $("#sleepBand").style.color=col;
     setRing($("#sleepArc"),si.score/100,col,SC);
     const parts=[`睡够度 ${Math.round(si.suff*100)}%`];
     if(si.eff!=null)parts.push(`效率 ${Math.round(si.eff*100)}%`);
-    if(last.deep!=null&&last.rem!=null)parts.push(`深睡 ${last.deep}m·REM ${last.rem}m`);
-    $("#sleepRead").innerHTML=parts.join(' · ');
+    if(sleepDay.deep!=null&&sleepDay.rem!=null)parts.push(`深睡 ${sleepDay.deep}m·REM ${sleepDay.rem}m`);
+    $("#sleepRead").innerHTML=(sleepDay.date!==last.date?`<span style="color:var(--muted)">${sleepDay.date} 醒来</span> · `:'')+parts.join(' · ');
   }else{ $("#sleepScore").textContent='--'; $("#sleepBand").textContent='无数据'; $("#sleepBand").style.color='var(--muted)';
-    $("#sleepArc").style.strokeDashoffset=SC; $("#sleepRead").textContent='昨夜没有睡眠记录。'; }
+    $("#sleepArc").style.strokeDashoffset=SC; $("#sleepRead").textContent='最近没有睡眠记录。'; }
 
-  // Strain
-  if(last.strain!=null){ const [txt,col]=strainBandOf(last.strain);
-    $("#strainScore").textContent=last.strain.toFixed(1); $("#strainScore").style.color=col;
+  // Strain(回落到最近有活动的一天)
+  const strainDay=lastWith('strain');
+  if(strainDay){ const [txt,col]=strainBandOf(strainDay.strain);
+    $("#strainScore").textContent=strainDay.strain.toFixed(1); $("#strainScore").style.color=col;
     $("#strainBand").textContent=txt; $("#strainBand").style.color=col;
-    setRing($("#strainArc"),last.strain/21,col,SC);
-    $("#strainRead").innerHTML=`0–21 对数刻度,反映心血管累计消耗。理想是让 Strain 与 Recovery 匹配——恢复高的日子才上大强度。`;
+    setRing($("#strainArc"),strainDay.strain/21,col,SC);
+    $("#strainRead").innerHTML=(strainDay.date!==last.date?`<span style="color:var(--muted)">${strainDay.date}</span> · `:'')+`0–21 对数刻度,反映心血管累计消耗。理想是让 Strain 与 Recovery 匹配——恢复高的日子才上大强度。`;
   }else{ $("#strainScore").textContent='--'; $("#strainBand").textContent='无数据'; $("#strainBand").style.color='var(--muted)';
-    $("#strainArc").style.strokeDashoffset=SC; $("#strainRead").textContent='今天没有活动区间数据(需授权活动数据)。'; }
+    $("#strainArc").style.strokeDashoffset=SC; $("#strainRead").textContent='最近没有活动区间数据(需授权活动数据)。'; }
 
   renderBodyAge(computeBodyAge(rows));
   fillMetrics(last);
