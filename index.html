@@ -319,9 +319,12 @@ let cacheFrom=null, cacheTo=null;   // 缓存已覆盖的日期区间(用于增�
 
 /* ---------- init ---------- */
 (function(){
-  const savedId=localStorage.getItem('ghClientId'); if(savedId)$("#clientId").value=savedId;
+  // 默认值(非密钥,公开安全):client_id + 私有数据仓库名,省去手机端打字
+  const DEF_CID='309510085311-h11oa2j7f0gr15nhe0d0kl3fccuf2cde.apps.googleusercontent.com';
+  const DEF_REPO='carycheung/fitbit-recovery-data';
+  $("#clientId").value=localStorage.getItem('ghClientId')||DEF_CID;
   const by=localStorage.getItem('ghBirthYear'); if(by)$("#birthYear").value=by;
-  const dr=localStorage.getItem('ghDataRepo'); if(dr)$("#dataRepo").value=dr;
+  $("#dataRepo").value=localStorage.getItem('ghDataRepo')||DEF_REPO;
   const dp=localStorage.getItem('ghDataPat'); if(dp)$("#dataPat").value=dp;
   // 复用还没过期的 access token（省去每次刷新都要授权）
   try{ const t=JSON.parse(localStorage.getItem('ghToken')||'null');
@@ -476,10 +479,11 @@ $("#cloudLoad").onclick=()=>loadFromCloud(true);
 let codeClient=null;
 function renewGoogle(){
   const cid=($("#clientId").value||'').trim();
-  const repo=(localStorage.getItem('ghDataRepo')||'').trim(), pat=(localStorage.getItem('ghDataPat')||'').trim();
+  const repo=($("#dataRepo").value||'').trim(), pat=($("#dataPat").value||'').trim();
   if(!cid){ $("#settings").classList.remove('hide'); setStatus('先填 Client ID(和云端用同一个 Web 客户端)','err'); return; }
-  if(!repo||!pat){ $("#settings").classList.remove('hide'); setStatus('先填云端仓库和 token','err'); return; }
+  if(!repo||!pat){ $("#settings").classList.remove('hide'); setStatus('先在设置里粘一个 PAT(github_pat_…)再点续期','err'); return; }
   localStorage.setItem('ghClientId',cid);
+  localStorage.setItem('ghDataRepo',repo); localStorage.setItem('ghDataPat',pat);
   if(!(window.google&&google.accounts&&google.accounts.oauth2&&google.accounts.oauth2.initCodeClient)){
     setStatus('Google 库还没加载好,稍等一两秒再点','err'); return; }
   codeClient=google.accounts.oauth2.initCodeClient({
