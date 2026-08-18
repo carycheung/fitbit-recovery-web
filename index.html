@@ -143,7 +143,10 @@
 <div class="app">
   <header class="bar">
     <div class="brand">Recovery <span class="pill">Fitbit Air</span></div>
-    <button class="icon" id="gear" title="设置">⚙</button>
+    <div style="display:flex;gap:8px">
+      <button class="icon" id="refresh" title="刷新到今天">↻</button>
+      <button class="icon" id="gear" title="设置">⚙</button>
+    </div>
   </header>
 
   <!-- settings sheet -->
@@ -315,6 +318,12 @@ function setStatus(msg,kind){ const el=$("#status"); if(!msg){el.className='';el
 $("#gear").onclick=()=>$("#settings").classList.toggle("hide");
 
 /* ---------- Google Identity Services ---------- */
+let authTimer=null, pendingConsent=false;
+function tokenValid(){ try{ const t=JSON.parse(localStorage.getItem('ghToken')||'null');
+  return t&&t.token&&t.exp&&t.exp>Date.now()+60000; }catch(e){ return false; } }
+function saveToken(resp){ accessToken=resp.access_token;
+  const ttl=(parseInt(resp.expires_in)||3600)*1000;
+  try{ localStorage.setItem('ghToken',JSON.stringify({token:accessToken,exp:Date.now()+ttl})); }catch(e){} }
 function ensureClient(){
   const cid=$("#clientId").value.trim();
   if(!cid){ setStatus('先粘贴你的 OAuth Client ID','err'); return null; }
@@ -324,37 +333,57 @@ function ensureClient(){
     tokenClient=google.accounts.oauth2.initTokenClient({
       client_id:cid, scope:SCOPES,
       callback:(resp)=>{
-        if(resp.error){ setStatus('授权失败:'+resp.error+(resp.error_description?' — '+resp.error_description:''),'err'); return; }
-        accessToken=resp.access_token;
-        const ttl=(parseInt(resp.expires_in)||3600)*1000;
-        try{ localStorage.setItem('ghToken',JSON.stringify({token:accessToken,exp:Date.now()+ttl})); }catch(e){}
-        $("#refetch").classList.remove("hide"); $("#who").textContent='已授权 · carycheung321';
+        clearTimeout(authTimer); pendingConsent=false;
+        if(resp.error){ setStatus('授权失败:'+resp.error+(resp.error_description?' — '+resp.error_description:'')+'。手机上如果没弹窗,点右上角 ↻ 再试一次。','err'); showSignIn(); return; }
+        saveToken(resp);
+        $("#who").textContent='已授权 · carycheung321'; showSignedIn();
         fetchAll();
-      }
+      },
+      error_callback:(err)=>{ clearTimeout(authTimer); pendingConsent=false;
+        setStatus('授权被中断('+((err&&err.type)||'popup')+')。点右上角 ↻ 或设置里的登录按钮重试。','err'); showSignIn(); }
     });
     tokenClient._cid=cid;
   }
   return tokenClient;
 }
-$("#signin").onclick=()=>{ const c=ensureClient(); if(c){ setStatus('等待 Google 授权弹窗…','info'); c.requestAccessToken({prompt: accessToken?'':'consent'}); } };
-$("#refetch").onclick=()=>{ if(accessToken) fetchAll(); else $("#signin").click(); };
-$("#grantMore").onclick=()=>{ const c=ensureClient(); if(c){ triedGrant=true; setStatus('弹窗里勾选「活动数据」权限…','info'); c.requestAccessToken({prompt:'consent'}); } };
+// 弹授权（必须由点击触发）；带看门狗，绝不无限等待
+function requestAuth(consent){
+  const c=ensureClient(); if(!c) return;
+  pendingConsent=!!consent;
+  setStatus(consent?'弹窗里选 carycheung321 并同意所有权限…':'弹窗里选 carycheung321…','info');
+  clearTimeout(authTimer);
+  authTimer=setTimeout(()=>{ if(pendingConsent){ pendingConsent=false;
+    setStatus('没等到授权窗口(手机浏览器可能拦了弹窗)。请允许弹窗后,点右上角 ↻ 重试。','err'); showSignIn(); } },25000);
+  c.requestAccessToken({prompt: consent?'consent':'', hint:'carycheung321@gmail.com'});
+}
+function showSignIn(){ $("#signin").classList.remove("hide"); $("#refetch").classList.add("hide"); }
+function showSignedIn(){ $("#signin").classList.add("hide"); $("#refetch").classList.remove("hide"); }
+// 一键刷新：有效 token→纯 fetch（手机上最稳,不碰 Google）；过期→需点授权
+function refreshNow(){
+  if(!$("#clientId").value.trim()){ $("#settings").classList.remove("hide"); setStatus('先在设置里填 Client ID','err'); return; }
+  if(accessToken){ setStatus('刷新中…','info'); fetchAll(); return; }
+  requestAuth(false);
+}
+$("#refresh").onclick=refreshNow;
+$("#signin").onclick=()=>requestAuth(!accessToken);   // 首次登录带 consent
+$("#refetch").onclick=refreshNow;
+$("#grantMore").onclick=()=>{ triedGrant=true; requestAuth(true); };
 const gisTimer=setInterval(()=>{ if(window.google&&google.accounts&&google.accounts.oauth2){ $("#signin").disabled=false; clearInterval(gisTimer); maybeAutoLogin(); } },300);
 function maybeAutoLogin(){
   const cid=$("#clientId").value.trim();
   if(!cid){ if(!cachedLatest) $("#settings").classList.remove("hide"); return; }
-  if(cachedLatest && cachedLatest>=todayStr()){ setStatus('已是最新(缓存,今天已出分)','ok'); return; }
-  $("#settings").classList.add("hide");
-  // 已有未过期的 token → 直接拉取，不再弹授权
+  if(cachedLatest && cachedLatest>=todayStr()){ setStatus('已是最新(缓存,今天已出分)','ok'); if(accessToken)showSignedIn(); return; }
+  // 有未过期 token → 直接纯 fetch 更新（手机上不弹任何东西,不会卡）
   if(accessToken){
-    $("#refetch").classList.remove("hide"); $("#who").textContent='已授权 · carycheung321';
+    $("#settings").classList.add("hide"); showSignedIn();
+    $("#who").textContent='已授权 · carycheung321';
     setStatus(cachedLatest?'缓存里还没有今天,正在更新…':'拉取中…','info');
     fetchAll(); return;
   }
-  const c=ensureClient(); if(!c){ if(!cachedLatest) $("#settings").classList.remove("hide"); return; }
-  $("#who").textContent = cachedLatest ? '后台更新中…' : '自动登录中…';
-  setStatus(cachedLatest?'缓存里还没有今天,正在静默更新…':'自动登录中…','info');
-  c.requestAccessToken({prompt:''});
+  // 没有有效 token：不自动弹窗(手机上会卡死),提示点一下
+  showSignIn();
+  if(cachedLatest){ setStatus('显示的是缓存。要更新到今天,点右上角 ↻。','info'); }
+  else{ $("#settings").classList.remove("hide"); setStatus('填好 Client ID 后,点「用 Google 登录并拉取」。','info'); }
 }
 
 /* ---------- fetch ---------- */
@@ -365,7 +394,9 @@ async function apiList(type,filter){
     const u=new URL(`${API}/${type}/dataPoints`);
     u.searchParams.set('filter',filter);
     if(pageToken)u.searchParams.set('pageToken',pageToken);
-    const r=await fetch(u,{headers:{Authorization:'Bearer '+accessToken}});
+    const ctl=new AbortController(); const to=setTimeout(()=>ctl.abort(),20000);
+    let r; try{ r=await fetch(u,{headers:{Authorization:'Bearer '+accessToken},signal:ctl.signal}); }
+    finally{ clearTimeout(to); }
     if(!r.ok){ const t=await r.text(); throw new Error(`${type} → HTTP ${r.status} ${t.slice(0,160)}`); }
     const j=await r.json();
     (j.dataPoints||[]).forEach(p=>out.push(p));
@@ -396,22 +427,24 @@ async function fetchAll(){
     if(s.status==='fulfilled') lastRaw[k]=s.value;
     else { lastRaw[k]=[]; fails.push(k); errs.push((s.reason&&s.reason.message)||''); }
   });
-  // token 过期 → 清缓存的 token，静默重授权一次
+  // token 过期 → 清掉,提示点一下重新授权（手机上不能自动弹,会卡）
   if(errs.some(e=>/HTTP 401|UNAUTHENTICATED|invalid_token|invalid authentication/i.test(e))){
-    localStorage.removeItem('ghToken'); accessToken=null;
-    setStatus('登录已过期,正在重新授权…','info');
-    const c=ensureClient(); if(c){ c.requestAccessToken({prompt:''}); }
+    localStorage.removeItem('ghToken'); accessToken=null; showSignIn();
+    setStatus('登录已过期。点右上角 ↻ 重新授权(会弹一次 Google 窗口)。','err');
     return;
+  }
+  // 网络超时/断网
+  if(!core && errs.some(e=>/aborted|Failed to fetch|NetworkError|timeout/i.test(e))){
+    setStatus('网络请求超时,没拉到数据。检查网络后点右上角 ↻ 重试。','err'); return;
   }
   $("#raw").textContent=JSON.stringify(lastRaw,null,1);
   const core=(lastRaw.hrv.length+lastRaw.rhr.length+lastRaw.rr.length+lastRaw.sleep.length);
   const activityFailed=['azm','steps','vo2'].some(k=>fails.includes(k));
 
-  // 新增了 activity scope：若旧 token 无此权限，静默补授权一次
-  if(activityFailed && !triedGrant && accessToken){
-    triedGrant=true;
-    setStatus('需要授权「活动数据」以计算 Strain / 身体年龄,弹窗确认一下…','info');
-    const c=ensureClient(); if(c){ c.requestAccessToken({prompt:'consent'}); return; }
+  // 新增了 activity scope：若旧 token 无此权限，提示点一下补授权（不自动弹）
+  if(activityFailed && !triedGrant){
+    triedGrant=true; $("#grantMore").classList.remove('hide');
+    setStatus('Recovery/Sleep 已出。要算 Strain / 身体年龄,点设置里「授权活动数据」补一次权限。','info');
   }
   if(!core && activityFailed){ setStatus('授权成功,但这个区间没拉到数据(或权限不足)。换更近/更宽区间,或点⚙重新授权。','err'); return; }
 
