@@ -402,7 +402,8 @@ function maybeAutoLogin(){
   if(cloudConfigured()){
     if(maybeAutoLogin._cloudDone) return; maybeAutoLogin._cloudDone=true;
     showSignedIn(); $("#settings").classList.add("hide");
-    if(cachedLatest && cachedLatest>=todayStr()){ setStatus('已是最新 · 缓存','ok'); return; }
+    // 云端每天 5 次刷新、读一次只是一个 GET → 每次进页面都拉最新,不吃"今天已缓存就不更"的旧短路
+    //（否则上午缓存了 steps=0 的旧数据,cachedLatest 已是今天,就永远看不到后来补齐的步数/身体年龄）
     loadFromCloud(false); return;
   }
   const cid=$("#clientId").value.trim();
@@ -708,17 +709,28 @@ function compute(daily,c){
   }
   return daily;
 }
-// Sleep performance
-const SLEEP_NEED=480;
-function computeSleep(r){
+// Sleep performance —— 动态睡眠需求(对标 WHOOP:基础 + 睡眠债 + 当天负荷)
+const SLEEP_BASE=480;              // 基础需求 8h
+function sleepNeed(rows,i){
+  let need=SLEEP_BASE;
+  // ① 近 3 晚睡眠债:每晚差基础的部分累计,补一部分(30%)进今晚需求,封顶 +90min
+  const prev=[]; for(let j=i-1;j>=0&&prev.length<3;j--){ if(rows[j].sleep!=null)prev.push(rows[j].sleep); }
+  if(prev.length){ const debt=prev.reduce((s,v)=>s+Math.max(0,SLEEP_BASE-v),0); need+=clamp(debt*0.30,0,90); }
+  // ② 前一天负荷高 → 多需要恢复睡眠(Strain 14+ 起加,满 21 加 45min)
+  const ps=(i>0)?rows[i-1].strain:null;
+  if(ps!=null&&ps>14)need+=clamp((ps-14)/7*45,0,45);
+  return clamp(need,SLEEP_BASE,SLEEP_BASE+120);   // 8h–10h 之间
+}
+function computeSleep(r,rows,i){
   if(r==null||r.sleep==null) return null;
-  const suff=clamp(r.sleep/SLEEP_NEED,0,1.05);
+  const need=(rows&&i!=null)?sleepNeed(rows,i):SLEEP_BASE;
+  const suff=clamp(r.sleep/need,0,1.05);
   const eff=(r.tib&&r.tib>0)?clamp(r.sleep/r.tib,0,1):null;
   const rest=(r.deep!=null&&r.rem!=null&&r.sleep>0)?clamp((r.deep+r.rem)/r.sleep/0.45,0,1):null;
   const parts=[[0.6,suff]]; if(eff!=null)parts.push([0.2,eff]); if(rest!=null)parts.push([0.2,rest]);
   const wsum=parts.reduce((s,p)=>s+p[0],0);
   const score=clamp(Math.round(100*parts.reduce((s,p)=>s+p[0]*p[1],0)/wsum),0,100);
-  return {score,suff,eff,rest};
+  return {score,suff,eff,rest,need};
 }
 // Strain 0-21（对数刻度，按个人负荷上限自适应）
 function computeStrain(rows){
@@ -734,8 +746,10 @@ function fitnessAgeFromVO2(v){ return clamp(20+(48-v)/0.42,18,85); }
 function ageEstimate(rows,age){
   const v=rows.map(r=>estVO2(r,age)).filter(x=>x!=null); if(!v.length)return null;
   const vo2=mean(v), rhr=avgField(rows,'rhr'), steps=avgField(rows,'steps');
+  const hasRealVO2=rows.some(r=>r.vo2!=null);
   let a=fitnessAgeFromVO2(vo2);
-  if(rhr!=null)a+=clamp((rhr-60)*0.15,-4,6);
+  // 只有拿到「真」VO₂max 时才把 RHR 当独立修正;否则 VO₂ 已由 RHR 反推,再加就是重复计一次(会把年龄算老)
+  if(hasRealVO2&&rhr!=null)a+=clamp((rhr-60)*0.15,-4,6);
   if(steps!=null)a+=clamp((7000-steps)/1800,-3,4);
   if(age)a=clamp(a,age-15,age+20);
   return {age:clamp(a,18,85),vo2,rhr,steps};
@@ -757,7 +771,7 @@ const strainBandOf=s=>s>=18?['极高','#ff5c5c']:s>=14?['偏高','#3fd8e0']:s>=1
 
 /* ---------- render ---------- */
 function buildDailyAndRender(){ lastDaily=buildDaily($("#hrvSrc").value); compute(lastDaily,cfg()); computeStrain(lastDaily);
-  lastDaily.forEach(r=>{ const si=computeSleep(r); r._sleep=si?si.score:null; r._sleepInfo=si; });
+  lastDaily.forEach((r,i)=>{ const si=computeSleep(r,lastDaily,i); r._sleep=si?si.score:null; r._sleepInfo=si; });
   render(lastDaily); }
 $("#recompute").onclick=()=>{ if(lastRaw) buildDailyAndRender(); };
 
@@ -800,6 +814,7 @@ function render(rows){
     $("#sleepBand").textContent=txt; $("#sleepBand").style.color=col;
     setRing($("#sleepArc"),si.score/100,col,SC);
     const parts=[`睡够度 ${Math.round(si.suff*100)}%`];
+    if(si.need!=null)parts.push(`需求 ${Math.floor(si.need/60)}h${Math.round(si.need%60)?Math.round(si.need%60)+'m':''}`);
     if(si.eff!=null)parts.push(`效率 ${Math.round(si.eff*100)}%`);
     if(sleepDay.deep!=null&&sleepDay.rem!=null)parts.push(`深睡 ${sleepDay.deep}m·REM ${sleepDay.rem}m`);
     $("#sleepRead").innerHTML=(sleepDay.date!==last.date?`<span style="color:var(--muted)">${sleepDay.date} 醒来</span> · `:'')+parts.join(' · ');
@@ -879,7 +894,7 @@ function fillMetrics(d){
 function fillDefs(){
   $("#defs").innerHTML=`
     <div><span class="term">Recovery 恢复度(0–100%)</span> — 身体今天「准备好了没」。HRV(占大头)+静息心率+睡眠+呼吸率各自相对你近 30 天基线求偏移,加权后映射。绿 ≥67 可上强度 / 黄 34–66 适度 / 红 &lt;34 该休息。</div>
-    <div><span class="term">Sleep 睡眠表现(0–100%)</span> — = 睡够度(实际睡眠 ÷ 8h 需求,占 60%)+ 睡眠效率(躺床时间里真正睡着的比例,20%)+ 修复占比(深睡+REM ÷ 总睡眠 ÷ 0.45,20%)。85+ 优秀 / 70–84 尚可 / &lt;70 不足。</div>
+    <div><span class="term">Sleep 睡眠表现(0–100%)</span> — = 睡够度(实际睡眠 ÷ <b>动态需求</b>,占 60%)+ 睡眠效率(躺床时间里真正睡着的比例,20%)+ 修复占比(深睡+REM ÷ 总睡眠 ÷ 0.45,20%)。需求随近 3 晚睡眠债和前一天负荷在 8–10h 间浮动(对标 WHOOP)。85+ 优秀 / 70–84 尚可 / &lt;70 不足。</div>
     <div><span class="term">Strain 当日负荷(0–21,对数刻度)</span> — 心血管累计消耗,来自你在各心率区间停留的时间(高区间权重更大)。&lt;10 轻松 / 10–14 适中 / 14–18 偏高 / 18+ 极限。看它是否与当天 Recovery 匹配。</div>
     <div><span class="term">Body Age 身体年龄</span> — 用 VO₂max(或静息心率+年龄反推)为主,叠加静息心率、日均步数,估出的心肺「体感年龄」。近 30 天滚动、每周尺度缓变。关注月度趋势而非绝对数。</div>
     <div><span class="term">z 分</span> — 每个指标当天相对你个人基线偏离了几个标准差;绿色 chip=好的方向,红色=差的方向。它让分数因人而异,而不是套统一阈值。</div>`;
