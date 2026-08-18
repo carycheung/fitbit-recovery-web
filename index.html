@@ -674,8 +674,15 @@ function buildDaily(hrvSrc){
     if(s.rem!=null)day.rem=(day.rem||0)+s.rem; }
   for(const p of (lastRaw.azm||[])){ const o=pay(p); const iv=o.interval||{}; const d=dstr(iv.civilStartTime||iv.startTime); if(!d)continue;
     const az=num(o.activeZoneMinutes); if(az!=null)D(d).azmLoad+=az*zoneWeight(o.heartRateZone); }
-  for(const p of (lastRaw.steps||[])){ const o=pay(p); const iv=o.interval||{}; const d=dstr(iv.civilStartTime||iv.startTime); if(!d)continue;
-    const c=num(o.count); if(c!=null)D(d).steps+=c; }
+  // steps:手环+手机两个来源会在重叠的分钟里各报一次,直接相加会翻倍(你实测 6300 被算成 11000)
+  // → 按 (日期,UTC分钟) 分桶,同一分钟里的多个来源取平均,再累加到当天
+  { const bucket={};
+    for(const p of (lastRaw.steps||[])){ const o=pay(p); const iv=o.interval||{}; const d=dstr(iv.civilStartTime||iv.startTime); if(!d)continue;
+      const c=num(o.count); if(c==null)continue;
+      const t=iv.startTime?new Date(iv.startTime):null;
+      const key=d+'|'+(t?(t.getUTCHours()*60+t.getUTCMinutes()):('r'+Object.keys(bucket).length));
+      (bucket[key]=bucket[key]||{d,vals:[]}).vals.push(c); }
+    for(const k in bucket){ const b=bucket[k]; D(b.d).steps+=b.vals.reduce((s,x)=>s+x,0)/b.vals.length; } }
   for(const p of (lastRaw.vo2||[])){ const o=pay(p); const d=dstr(o.date); if(!d)continue; const v=vo2Val(o); if(v!=null)D(d).vo2=v; }
   return Object.keys(days).sort().map(d=>{ const x=days[d];
     return {date:d, hrv:x.hrv??null, rhr:x.rhr??null, rr:x.rr??null, sleep:x.sleep??null, tib:x.tib??null,
