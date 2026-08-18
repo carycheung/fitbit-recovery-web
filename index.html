@@ -613,6 +613,11 @@ function dstr(d){ if(!d)return null;
   if(typeof d==='object'){ const g=d.date&&typeof d.date==='object'?d.date:d;   // civil 时间是 {date:{year,month,day},time:{…}} 嵌套
     if(g.year)return `${g.year}-${pad(g.month||1)}-${pad(g.day||1)}`; }
   const m=(''+d).match(/(\d{4})-(\d{2})-(\d{2})/); return m?`${m[1]}-${m[2]}-${m[3]}`:null; }
+// 用 UTC 时间 + offset(如 "28800s"=+8h) 手动算本地日期。睡眠段没有 civil 字段,只能这样归到正确的本地日,
+// 否则 UTC 的凌晨会把"今早醒来的觉"错归到昨天,两晚挤一天 → 睡眠时长翻倍(假的 10h+ → 假 100%)。
+function localDay(iso,offStr){ if(!iso)return null; const t=new Date(iso); if(isNaN(t))return null;
+  const off=num(offStr); const ms=t.getTime()+(off!=null?off*1000:0);
+  const l=new Date(ms); return `${l.getUTCFullYear()}-${pad(l.getUTCMonth()+1)}-${pad(l.getUTCDate())}`; }
 // 每条 dataPoint 外面包一层：{ dataSource:{…}, <类型对象>:{…} }。取出非 dataSource 的那层。
 const pay=p=>{ if(p&&typeof p==='object'){ for(const k in p){ if(k!=='dataSource'&&p[k]&&typeof p[k]==='object') return p[k]; } } return p; };
 function daysAgoStr(n){ const d=new Date(); d.setDate(d.getDate()-n); return `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}`; }
@@ -666,18 +671,20 @@ function buildDaily(hrvSrc){
     const v=hrvSrc==='avg'?(avg??deep):(deep??avg); if(v!=null&&+v>0)D(d).hrv=+v; }   // HRV=0 是设备缺采,不能进(log0=-∞ 会污染基线)
   for(const p of lastRaw.rhr){ const o=pay(p); const d=dstr(o.date); if(!d)continue; const v=num(o.beatsPerMinute); if(v!=null)D(d).rhr=v; }
   for(const p of lastRaw.rr){ const o=pay(p); const d=dstr(o.date); if(!d)continue; const v=num(o.breathsPerMinute); if(v!=null)D(d).rr=v; }
-  for(const p of (lastRaw.sleep||[])){ const o=pay(p); const iv=o.interval||{}; const d=dstr(iv.civilEndTime||iv.endTime); if(!d)continue;
+  for(const p of (lastRaw.sleep||[])){ const o=pay(p); const iv=o.interval||{};
+    // 睡眠归"醒来"的本地日:优先 civilEndTime,没有就用 endTime+endUtcOffset 手动转本地(别用裸 UTC,凌晨会错归昨天)
+    const d=dstr(iv.civilEndTime)||localDay(iv.endTime,iv.endUtcOffset)||dstr(iv.endTime); if(!d)continue;
     const s=sleepDetail(o); const day=D(d);
     if(s.asleep!=null)day.sleep=(day.sleep||0)+s.asleep;
     if(s.tib!=null)day.tib=(day.tib||0)+s.tib;
     if(s.deep!=null)day.deep=(day.deep||0)+s.deep;
     if(s.rem!=null)day.rem=(day.rem||0)+s.rem; }
-  for(const p of (lastRaw.azm||[])){ const o=pay(p); const iv=o.interval||{}; const d=dstr(iv.civilStartTime||iv.startTime); if(!d)continue;
+  for(const p of (lastRaw.azm||[])){ const o=pay(p); const iv=o.interval||{}; const d=dstr(iv.civilStartTime)||localDay(iv.startTime,iv.startUtcOffset)||dstr(iv.startTime); if(!d)continue;
     const az=num(o.activeZoneMinutes); if(az!=null)D(d).azmLoad+=az*zoneWeight(o.heartRateZone); }
   // steps:手环+手机两个来源会在重叠的分钟里各报一次,直接相加会翻倍(你实测 6300 被算成 11000)
-  // → 按 (日期,UTC分钟) 分桶,同一分钟里的多个来源取平均,再累加到当天
+  // → 按 (本地日,UTC分钟) 分桶,同一分钟里的多个来源取平均,再累加到当天
   { const bucket={};
-    for(const p of (lastRaw.steps||[])){ const o=pay(p); const iv=o.interval||{}; const d=dstr(iv.civilStartTime||iv.startTime); if(!d)continue;
+    for(const p of (lastRaw.steps||[])){ const o=pay(p); const iv=o.interval||{}; const d=dstr(iv.civilStartTime)||localDay(iv.startTime,iv.startUtcOffset)||dstr(iv.startTime); if(!d)continue;
       const c=num(o.count); if(c==null)continue;
       const t=iv.startTime?new Date(iv.startTime):null;
       const key=d+'|'+(t?(t.getUTCHours()*60+t.getUTCMinutes()):('r'+Object.keys(bucket).length));
