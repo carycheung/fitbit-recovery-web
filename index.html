@@ -608,7 +608,9 @@ function maxDate(a,b){ if(!a)return b; if(!b)return a; return a>b?a:b; }
 
 /* ---------- helpers ---------- */
 const num=v=>{ if(v==null)return null; const n=parseFloat((''+v).replace(/[^0-9.\-]/g,'')); return isFinite(n)?n:null; };
-function dstr(d){ if(!d)return null; if(typeof d==='object'&&d.year)return `${d.year}-${pad(d.month||1)}-${pad(d.day||1)}`;
+function dstr(d){ if(!d)return null;
+  if(typeof d==='object'){ const g=d.date&&typeof d.date==='object'?d.date:d;   // civil 时间是 {date:{year,month,day},time:{…}} 嵌套
+    if(g.year)return `${g.year}-${pad(g.month||1)}-${pad(g.day||1)}`; }
   const m=(''+d).match(/(\d{4})-(\d{2})-(\d{2})/); return m?`${m[1]}-${m[2]}-${m[3]}`:null; }
 // 每条 dataPoint 外面包一层：{ dataSource:{…}, <类型对象>:{…} }。取出非 dataSource 的那层。
 const pay=p=>{ if(p&&typeof p==='object'){ for(const k in p){ if(k!=='dataSource'&&p[k]&&typeof p[k]==='object') return p[k]; } } return p; };
