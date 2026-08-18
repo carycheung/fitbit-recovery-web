@@ -307,6 +307,7 @@ const SCOPES=[
 const API='https://health.googleapis.com/v4/users/me/dataTypes';
 let tokenClient=null, accessToken=null, lastRaw=null, lastDaily=null, cachedLatest=null, lastScored=null;
 let activeRange=30, chartMetric='recovery', triedGrant=false;
+let cacheFrom=null, cacheTo=null;   // 缓存已覆盖的日期区间(用于增量同步)
 
 /* ---------- init ---------- */
 (function(){
@@ -436,44 +437,66 @@ async function apiList(type,filter){
   return out;
 }
 async function fetchAll(){
-  const from=$("#from").value, to=$("#to").value;
-  if(!from||!to){ setStatus('选一下起止日期','err'); return; }
+  const to=$("#to").value||todayStr();
+  const userFrom=$("#from").value;
+  if(!userFrom||!to){ setStatus('选一下起止日期','err'); return; }
   const toEx=new Date(to); toEx.setDate(toEx.getDate()+1); const toExS=toEx.toISOString().slice(0,10);
-  const F=(res,field)=>`${res}.${field} >= "${from}" AND ${res}.${field} < "${toExS}"`;
-  const Fc=(res,field)=>`${res}.${field} >= "${from}T00:00:00" AND ${res}.${field} < "${toExS}T00:00:00"`;
-  setStatus('拉取中…','info');
+
+  // 增量同步:缓存已覆盖 [cacheFrom, cacheTo],这次只补 cachedLatest 之后的新日子
+  const haveCache = lastRaw && cachedLatest && ['hrv','rhr','rr','sleep'].some(k=>(lastRaw[k]||[]).length);
+  const canIncr = haveCache && cacheFrom && userFrom>=cacheFrom;   // 用户没要更早的历史才增量
+  const incrFrom = canIncr ? cachedLatest : null;                  // 从最后一天重拉(接住当天更新)
+
+  // 全量首拉:重类型(区间数据,量大)用更近的窗口提速;日粒度类型(小)用完整窗口建基线
+  const fSleep = incrFrom || maxDate(userFrom, daysAgoStr(45));
+  const fAzm   = incrFrom || maxDate(userFrom, daysAgoStr(45));
+  const fSteps = incrFrom || maxDate(userFrom, daysAgoStr(30));
+  const fDaily = incrFrom || userFrom;
+  const F =(res,field,frm)=>`${res}.${field} >= "${frm}" AND ${res}.${field} < "${toExS}"`;
+  const Fc=(res,field,frm)=>`${res}.${field} >= "${frm}T00:00:00" AND ${res}.${field} < "${toExS}T00:00:00"`;
+  setStatus(canIncr?'同步新数据…':'首次拉取(建基线,稍等)…','info');
   const defs={
-    hrv:['daily-heart-rate-variability',F('daily_heart_rate_variability','date')],
-    rhr:['daily-resting-heart-rate',F('daily_resting_heart_rate','date')],
-    rr:['daily-respiratory-rate',F('daily_respiratory_rate','date')],
-    sleep:['sleep',Fc('sleep','interval.civil_end_time')],
-    azm:['active-zone-minutes',Fc('active_zone_minutes','interval.civil_start_time')],
-    steps:['steps',Fc('steps','interval.civil_start_time')],
-    vo2:['daily-vo2-max',F('daily_vo2_max','date')],
+    hrv:['daily-heart-rate-variability',F('daily_heart_rate_variability','date',fDaily)],
+    rhr:['daily-resting-heart-rate',F('daily_resting_heart_rate','date',fDaily)],
+    rr:['daily-respiratory-rate',F('daily_respiratory_rate','date',fDaily)],
+    sleep:['sleep',Fc('sleep','interval.civil_end_time',fSleep)],
+    azm:['active-zone-minutes',Fc('active_zone_minutes','interval.civil_start_time',fAzm)],
+    steps:['steps',Fc('steps','interval.civil_start_time',fSteps)],
+    vo2:['daily-vo2-max',F('daily_vo2_max','date',fDaily)],
   };
   const keys=Object.keys(defs);
   progShow(); let done=0; const total=keys.length;
   const settled=await Promise.allSettled(keys.map(k=>
-    apiList(defs[k][0],defs[k][1]).finally(()=>{ done++; progSet(done,total); setStatus(`拉取中… ${done}/${total}`,'info'); })
+    apiList(defs[k][0],defs[k][1]).finally(()=>{ done++; progSet(done,total); setStatus(`${canIncr?'同步':'拉取'}中… ${done}/${total}`,'info'); })
   ));
   progHide();
-  lastRaw={}; const fails=[], errs=[];
+  const newRaw={}, fails=[], errs=[];
   settled.forEach((s,i)=>{ const k=keys[i];
-    if(s.status==='fulfilled') lastRaw[k]=s.value;
-    else { lastRaw[k]=[]; fails.push(k); errs.push((s.reason&&s.reason.message)||''); }
+    if(s.status==='fulfilled') newRaw[k]=s.value;
+    else { newRaw[k]=[]; fails.push(k); errs.push((s.reason&&s.reason.message)||''); }
   });
-  const core=(lastRaw.hrv.length+lastRaw.rhr.length+lastRaw.rr.length+lastRaw.sleep.length);
   // token 过期 → 清掉,提示点一下重新授权（手机上不能自动弹,会卡）
   if(errs.some(e=>/HTTP 401|UNAUTHENTICATED|invalid_token|invalid authentication/i.test(e))){
     localStorage.removeItem('ghToken'); accessToken=null; showSignIn();
     setStatus('登录已过期。点右上角 ↻ 重新授权(会弹一次 Google 窗口)。','err');
     return;
   }
-  // 网络超时/断网
-  if(!core && errs.some(e=>/aborted|Failed to fetch|NetworkError|timeout/i.test(e))){
-    setStatus('网络请求超时,没拉到数据。检查网络后点右上角 ↻ 重试。','err'); return;
+  // 网络超时/断网(增量时用旧缓存兜底,不清屏)
+  const gotAny=keys.some(k=>newRaw[k].length);
+  if(!gotAny && errs.some(e=>/aborted|Failed to fetch|NetworkError|timeout/i.test(e))){
+    setStatus('网络请求超时。'+(cachedLatest?'仍显示缓存,':'')+'检查网络后点右上角 ↻ 重试。','err'); return;
+  }
+  // 合并:增量=保留旧数据里 incrFrom 之前的,拼上新拉的;全量=直接替换
+  if(canIncr){
+    keys.forEach(k=>{ if(fails.includes(k))return;   // 这类没拉到就保留旧缓存
+      const kept=(lastRaw[k]||[]).filter(p=>{ const d=pointDate(k,p); return d && d<incrFrom; });
+      lastRaw[k]=kept.concat(newRaw[k]);
+    });
+  }else{
+    lastRaw=newRaw; ['hrv','rhr','rr','sleep','azm','steps','vo2'].forEach(k=>{ if(!lastRaw[k])lastRaw[k]=[]; });
   }
   $("#raw").textContent=JSON.stringify(lastRaw,null,1);
+  const core=(lastRaw.hrv.length+lastRaw.rhr.length+lastRaw.rr.length+lastRaw.sleep.length);
   const activityFailed=['azm','steps','vo2'].some(k=>fails.includes(k));
 
   // 新增了 activity scope：若旧 token 无此权限，提示点一下补授权（不自动弹）
@@ -483,15 +506,17 @@ async function fetchAll(){
   }
   if(!core && activityFailed){ setStatus('授权成功,但这个区间没拉到数据(或权限不足)。换更近/更宽区间,或点⚙重新授权。','err'); return; }
 
-  const parts=[`HRV ${lastRaw.hrv.length}`,`RHR ${lastRaw.rhr.length}`,`呼吸 ${lastRaw.rr.length}`,`睡眠 ${lastRaw.sleep.length}`,
-               `AZM ${lastRaw.azm.length}`,`步数 ${lastRaw.steps.length}`,`VO₂ ${lastRaw.vo2.length}`];
-  setStatus('拉到:'+parts.join(' · ')+(fails.length?` (未取到:${fails.join('/')})`:''), fails.length?'info':'ok');
+  const newCount=canIncr?keys.reduce((s,k)=>s+(fails.includes(k)?0:newRaw[k].length),0):core;
+  setStatus(canIncr?`已同步 · 新增 ${newCount} 条`+(fails.length?` (未取到:${fails.join('/')})`:''):
+            '拉到:'+[`HRV ${lastRaw.hrv.length}`,`RHR ${lastRaw.rhr.length}`,`呼吸 ${lastRaw.rr.length}`,`睡眠 ${lastRaw.sleep.length}`,`AZM ${lastRaw.azm.length}`,`步数 ${lastRaw.steps.length}`,`VO₂ ${lastRaw.vo2.length}`].join(' · ')+(fails.length?` (未取到:${fails.join('/')})`:''),
+            fails.length?'info':'ok');
   $("#grantMore").classList.toggle('hide',!activityFailed);
   buildDailyAndRender();
-  saveCache(from,to);
+  saveCache(canIncr?cacheFrom:fDaily, to);   // 缓存区间起点保持最早那天
   $("#recompute").disabled=false;
   $("#settings").classList.add("hide");
 }
+function maxDate(a,b){ if(!a)return b; if(!b)return a; return a>b?a:b; }
 
 /* ---------- helpers ---------- */
 const num=v=>{ if(v==null)return null; const n=parseFloat((''+v).replace(/[^0-9.\-]/g,'')); return isFinite(n)?n:null; };
@@ -499,6 +524,12 @@ function dstr(d){ if(!d)return null; if(typeof d==='object'&&d.year)return `${d.
   const m=(''+d).match(/(\d{4})-(\d{2})-(\d{2})/); return m?`${m[1]}-${m[2]}-${m[3]}`:null; }
 // 每条 dataPoint 外面包一层：{ dataSource:{…}, <类型对象>:{…} }。取出非 dataSource 的那层。
 const pay=p=>{ if(p&&typeof p==='object'){ for(const k in p){ if(k!=='dataSource'&&p[k]&&typeof p[k]==='object') return p[k]; } } return p; };
+function daysAgoStr(n){ const d=new Date(); d.setDate(d.getDate()-n); return `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}`; }
+// 取一条 dataPoint 归属的日期(YYYY-MM-DD),按类型看 date 还是 interval
+function pointDate(k,p){ const o=pay(p);
+  if(k==='sleep'){ const iv=o.interval||{}; return dstr(iv.civilEndTime||iv.endTime||iv.civilStartTime); }
+  if(k==='azm'||k==='steps'){ const iv=o.interval||{}; return dstr(iv.civilStartTime||iv.startTime); }
+  return dstr(o.date); }
 function segMin(st){ if(st==null)return null; const m=num(st.minutes); if(m!=null)return m;
   const iv=st.interval||st; const a=iv.startTime||iv.civilStartTime, b=iv.endTime||iv.civilEndTime;
   if(a&&b){ const d=(new Date(b)-new Date(a))/60000; return isFinite(d)?d:null; } return null; }
@@ -818,12 +849,14 @@ function setUpdated(at){
 }
 function saveCache(from,to){ const nowIso=new Date().toISOString();
   try{ localStorage.setItem('ghCache',JSON.stringify({at:nowIso,from,to,raw:lastRaw})); }catch(e){}
+  cacheFrom=from; cacheTo=to;
   cachedLatest=(lastDaily&&lastDaily.length)?lastDaily[lastDaily.length-1].date:cachedLatest;
   const at=new Date(nowIso); setUpdated(at); $("#who").textContent='已同步 · '+fmt(at); }
 function loadCacheAndRender(){
   let c; try{ c=JSON.parse(localStorage.getItem('ghCache')||'null'); }catch(e){ c=null; }
   if(!c||!c.raw) return;
   lastRaw=c.raw; ['hrv','rhr','rr','sleep','azm','steps','vo2'].forEach(k=>{ if(!lastRaw[k])lastRaw[k]=[]; });
+  cacheFrom=c.from||null; cacheTo=c.to||null;
   $("#raw").textContent=JSON.stringify(lastRaw,null,1);
   buildDailyAndRender();
   $("#recompute").disabled=false; $("#refetch").classList.remove("hide");
