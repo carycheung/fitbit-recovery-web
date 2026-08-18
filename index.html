@@ -662,7 +662,7 @@ function buildDaily(hrvSrc){
   const D=d=>days[d]||(days[d]={azmLoad:0,steps:0});
   for(const p of lastRaw.hrv){ const o=pay(p); const d=dstr(o.date); if(!d)continue;
     const deep=o.deepSleepRootMeanSquareOfSuccessiveDifferencesMilliseconds, avg=o.averageHeartRateVariabilityMilliseconds;
-    const v=hrvSrc==='avg'?(avg??deep):(deep??avg); if(v!=null)D(d).hrv=+v; }
+    const v=hrvSrc==='avg'?(avg??deep):(deep??avg); if(v!=null&&+v>0)D(d).hrv=+v; }   // HRV=0 是设备缺采,不能进(log0=-∞ 会污染基线)
   for(const p of lastRaw.rhr){ const o=pay(p); const d=dstr(o.date); if(!d)continue; const v=num(o.beatsPerMinute); if(v!=null)D(d).rhr=v; }
   for(const p of lastRaw.rr){ const o=pay(p); const d=dstr(o.date); if(!d)continue; const v=num(o.breathsPerMinute); if(v!=null)D(d).rr=v; }
   for(const p of (lastRaw.sleep||[])){ const o=pay(p); const iv=o.interval||{}; const d=dstr(iv.civilEndTime||iv.endTime); if(!d)continue;
